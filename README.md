@@ -1,1 +1,3 @@
-# BDSWebsite-t-ch-h-p-ML-
+Welcome to NhaTot – Revolutionizing Real Estate with Smart Technology
+
+At NhaTot, we bridge the gap between traditional real estate and cutting-edge artificial intelligence. Powered by advanced Machine Learning algorithms, our platform goes beyond simple property listings to deliver data-driven market insights, highly accurate property valuations, and tailored recommendations. Whether you are looking to buy, sell, or invest, our intelligent system analyzes real-time market trends and user preferences to help you make smarter, faster, and more profitable decisions. Experience the future of real estate search—seamless, predictive, and designed around you.
