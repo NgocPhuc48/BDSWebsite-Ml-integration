@@ -115,7 +115,7 @@ Hệ thống áp dụng mô hình **Kiến trúc Đa dịch vụ Decoupled (Hybr
 | :--- | :--- |
 | **Frontend** | ReactJS 18, Vite / Create React App, Redux Toolkit, React Router v6, TailwindCSS / Ant Design, Leaflet.js (Bản đồ), Axios. |
 | **Backend Core** | ASP.NET Core 8.0 (MVC / Web API), C# 12, Entity Framework Core / Dapper, AutoMapper, FluentValidation, JWT Authentication. |
-| **AI / Machine Learning** | Python 3.10+, FastAPI, Scikit-learn, XGBoost, LightGBM, Pandas, NumPy, Joblib. |
+| **AI / Machine Learning** | Python 3.10+, FastAPI, Scikit-learn, Random Forest, Pandas, NumPy, Joblib. |
 | **Crawler / ETL** | Python, BeautifulSoup4, Requests, Selenium, Hashlib (SHA-256). |
 | **Database** | SQL Server 2019+ (T-SQL, Stored Procedures, Filtered Indexes). |
 | **DevOps & Tools** | Git/GitHub, Docker (Option), Postman, SSMS, Visual Studio 2022 / VS Code. |
