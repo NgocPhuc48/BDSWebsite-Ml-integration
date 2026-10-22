@@ -226,7 +226,7 @@ uvicorn main:app --reload --port 8000
 1. Cấu hình Chuỗi kết nối Database trong `backend/NhaTot.API/appsettings.json`:
    ```json
    "ConnectionStrings": {
-     "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=BatDongSanNgheAn;Trusted_Connection=True;TrustServerCertificate=True;"
+     "DefaultConnection": "Server=YOUR_SERVER_NAME;Database=NhaTot;Trusted_Connection=True;TrustServerCertificate=True;"
    }
    ```
 2. Khởi chạy dự án:
