@@ -1,0 +1,75 @@
+@{
+    Layout = "_AdminLayout";
+    var users = (List<NguoiDungDTO>)ViewBag.Users;
+    var phongBan = (List<PhongBanDTO>)ViewBag.PhongBan;
+    var roles = (List<Core.Entities.Role>)ViewBag.Roles;
+}
+<div class="admin-card" style="margin-bottom:16px">
+    <h2 style="margin-top:0;font-size:16px">Thêm người dùng</h2>
+    <form method="post" asp-action="TaoNguoiDung">
+        @Html.AntiForgeryToken()
+        <input name="hoTenNguoiDung" placeholder="Họ tên" required />
+        <input name="tenTaiKhoan" placeholder="Tài khoản" required />
+        <input name="matKhau" type="password" placeholder="Mật khẩu" required />
+        <input name="soDienThoai" placeholder="Điện thoại" />
+        <select name="phongBanId">
+            <option value="">Phòng ban</option>
+            @foreach (var pb in phongBan)
+            {
+                <option value="@pb.Id">@pb.TenPhongBan</option>
+            }
+        </select>
+        <button type="submit">Thêm</button>
+    </form>
+</div>
+<div class="admin-card">
+    <h2 style="margin-top:0;font-size:16px">Danh sách người dùng</h2>
+    <table>
+        <tr><th>Tài khoản</th><th>Họ tên</th><th>Role</th><th>Sửa</th></tr>
+        @foreach (var user in users)
+        {
+            <tr>
+                <td>@user.TenTaiKhoan</td>
+                <td>@user.HoTenNguoiDung</td>
+                <td>
+                    @if (user.NguoiDungRole != null)
+                    {
+                        @string.Join(", ", user.NguoiDungRole.Select(x => x.Role?.RoleCode))
+                    }
+                </td>
+                <td>
+                    <form method="post" asp-action="SuaNguoiDung">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@user.Id" />
+                        <input name="hoTenNguoiDung" value="@user.HoTenNguoiDung" required />
+                        <input name="matKhau" type="password" placeholder="Mật khẩu mới" required />
+                        <input name="soDienThoai" value="@user.SoDienThoai" />
+                        <input name="soCanCuoc" value="@user.SoCanCuoc" placeholder="Căn cước" />
+                        <input name="diaChi" value="@user.DiaChi" placeholder="Địa chỉ" />
+                        <select name="phongBanId">
+                            <option value="">Phòng ban</option>
+                            @foreach (var pb in phongBan)
+                            {
+                                if (user.PhongBanId == pb.Id)
+                                {
+                                    <option value="@pb.Id" selected>@pb.TenPhongBan</option>
+                                }
+                                else
+                                {
+                                    <option value="@pb.Id">@pb.TenPhongBan</option>
+                                }
+                            }
+                        </select>
+                        <div>
+                            @foreach (var role in roles)
+                            {
+                                <label style="margin-right:8px"><input type="checkbox" name="roleIds" value="@role.Id" /> @role.RoleCode</label>
+                            }
+                        </div>
+                        <button type="submit">Lưu</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </table>
+</div>

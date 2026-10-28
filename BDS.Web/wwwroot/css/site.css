@@ -1,0 +1,84 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Helvetica, Arial, Roboto, sans-serif; color: #222; background: #fff; }
+a { color: inherit; }
+.site-header { display: flex; flex-direction: row; height: 96px; padding: 15px 24px; box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px; align-items: center; background: #fff; }
+.site-header .left { display: flex; align-items: center; flex: 1; min-width: 0; }
+.site-header .logo { height: 48px; width: 160px; object-fit: contain; }
+.nav-link { margin-left: 24px; padding: 12px 0 8px; font-size: 14px; line-height: 20px; color: #2C2C2C; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.site-header .right { display: flex; justify-content: flex-end; align-items: center; flex-shrink: 0; }
+.heart { margin-right: 12px; font-size: 28px; color: #222; }
+.login-link { display: flex; align-items: center; height: 36px; margin-right: 12px; font-weight: 550; text-decoration: none; color: #222; }
+.user-menu { position: relative; margin-right: 12px; }
+.user-menu .who { display: flex; align-items: center; cursor: pointer; }
+.avatar { height: 36px; width: 36px; border-radius: 50%; object-fit: cover; }
+.user-menu .name { margin-left: 8px; font-weight: 500; }
+.user-menu .drop { display: none; position: absolute; right: 0; top: 42px; background: #fff; min-width: 190px; box-shadow: rgba(0,0,0,.15) 0 6px 16px; border-radius: 8px; z-index: 30; padding: 6px 0; }
+.user-menu:hover .drop { display: block; }
+.user-menu .drop a, .user-menu .drop button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 8px 14px; text-decoration: none; cursor: pointer; font-size: 14px; }
+.user-menu .drop a:hover, .user-menu .drop button:hover { background: #f5f5f5; }
+.post-btn { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; text-decoration: none; color: #222; font-size: 14px; }
+.thong-bao { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; margin: 12px auto; width: 1140px; padding: 10px 14px; border-radius: 6px; }
+.pill, .pill-box { margin-right: 6px; border-radius: 5px; border: 1px solid #fff; height: 32px; color: #fff; font-weight: 500; background: transparent; }
+.pill { width: 210px; padding: 0 8px; }
+.pill option { color: #222; }
+.pill-box { width: 210px; display: flex; align-items: center; overflow: hidden; }
+.pill-box input { width: 50%; border: 0; background: transparent; color: #fff; outline: none; padding: 0 6px; }
+.pill-box input::placeholder { color: #fff; }
+.search-input { border: none; height: 48px; width: 600px; background: transparent; outline: none; padding: 0 12px; font-size: 15px; }
+.loai-select { width: 171px; border: none; border-right: 1px solid #F2F2F2; background: transparent; height: 48px; padding: 0 8px; }
+.the-tin { height: 306px; border-radius: 5px; width: 260px; float: left; box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px; margin-bottom: 24px; color: #000; text-decoration: none; display: block; background: #fff; }
+.the-tin .anh { height: 146px; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+.the-tin .anh img { height: 400px; width: auto; }
+.the-tin .than { height: 160px; padding: 12px; }
+.the-tin .gia { margin: 6px 0 0; color: red; font-size: 16px; font-weight: 550; }
+.login-container input, .login-container button.nut { height: 40px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 4px 11px; font-size: 14px; width: 100%; }
+.login-container button.nut { background: #7367f0; color: #fff; border: 0; cursor: pointer; margin-top: 12px; }
+.login-container button.nut:hover { background: #685dd8; }
+.login-container .loi { color: red; margin: 0 0 8px; }
+.trang-dang { width: 720px; margin: 24px auto 48px; background: #fff; border-radius: 8px; box-shadow: rgba(0,0,0,.15) 0 6px 16px; padding: 20px 24px; }
+.trang-dang h1 { font-size: 16px; margin: 0 0 16px; }
+.trang-dang label { display: block; margin-top: 10px; font-size: 13px; }
+.trang-dang input, .trang-dang select, .trang-dang textarea { width: 100%; margin-top: 4px; height: 36px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 4px 10px; }
+.trang-dang textarea { height: auto; }
+.trang-dang button { margin-top: 16px; background: #1677ff; color: #fff; border: 0; height: 36px; padding: 0 16px; border-radius: 6px; cursor: pointer; }
+.profile-wrap { width: 1028px; margin: 12px auto 40px; display: flex; }
+.menu-profile a { display: block; padding: 12px 16px; text-decoration: none; color: rgba(0,0,0,.88); border-left: 3px solid transparent; }
+.menu-profile a.active, .menu-profile a:hover { background: #e6f4ff; color: #1677ff; border-left-color: #1677ff; }
+.content-profile h2 { font-size: 16px; margin-top: 0; }
+.content-profile input, .content-profile button { margin-top: 8px; }
+.content-profile button { background: #1677ff; color: #fff; border: 0; height: 36px; padding: 0 14px; border-radius: 6px; cursor: pointer; }
+.content-profile table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.content-profile td, .content-profile th { border-bottom: 1px solid #f0f0f0; padding: 8px 4px; text-align: left; vertical-align: top; }
+.detail-wrap { width: 925px; margin: 12px auto 40px; display: flex; }
+.detail-main { width: 700px; }
+.detail-main img.cover { width: 100%; max-height: 420px; object-fit: cover; border-radius: 4px; }
+.detail-side { width: 210px; margin-left: 15px; }
+.seller { border: 1px solid #F3F3F3; border-radius: 5px; display: flex; flex-direction: column; padding-bottom: 12px; }
+.phone-btn { background: #009BA0; border: 0; border-radius: 5px; height: 40px; width: 90%; margin: 0 5%; color: #fff; cursor: pointer; }
+.zalo-btn { margin-top: 8px; border-radius: 5px; border: 1px solid #999; height: 40px; width: 90%; margin-left: 5%; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.thumbs { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.thumbs img { width: 80px; height: 60px; object-fit: cover; cursor: pointer; }
+.meta-row { display: flex; margin: 8px 0; }
+.meta-row > div { width: 50%; font-size: 14px; font-weight: 500; }
+hr.line { border: 0; border-top: 1px solid #f0f0f0; margin: 12px 0; }
+.admin-menu a { display: flex; align-items: center; height: 40px; padding: 0 16px; text-decoration: none; color: rgba(0,0,0,.88); }
+.admin-menu a.active, .admin-menu a:hover { background: #e6f4ff; color: #1677ff; }
+.admin-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: rgba(0,0,0,.06) 0 1px 4px; }
+.admin-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-card th, .admin-card td { border-bottom: 1px solid #f0f0f0; padding: 8px; text-align: left; vertical-align: top; }
+.admin-card input, .admin-card select { height: 32px; border: 1px solid #d9d9d9; border-radius: 6px; padding: 0 8px; margin: 2px; }
+.admin-card button { height: 32px; border: 0; border-radius: 6px; background: #1677ff; color: #fff; padding: 0 12px; cursor: pointer; margin: 2px; }
+.admin-card button.xoa { background: #ff4d4f; }
+.echbay-sms-messenger { width: 45px; text-align: center; right: 20px; position: fixed; bottom: 20px; z-index: 999; }
+.echbay-sms-messenger div { margin: 14px 0; background: #0084ff center no-repeat; background-size: 70%; border-radius: 50%; box-shadow: 0 3px 10px #888; width: 45px; height: 45px; }
+.echbay-sms-messenger a { line-height: 45px; color: transparent; display: block; }
+.phonering-alo-alo { background-image: url(https://codfe.com/wp-content/uploads/2020/08/call.png) !important; }
+.phonering-alo-sms { background-image: url(https://codfe.com/wp-content/uploads/2020/08/mail.png) !important; background-color: #f60 !important; background-size: 60% !important; }
+.phonering-alo-zalo { background-image: url(https://codfe.com/wp-content/uploads/2020/08/zalo.png) !important; }
+.phonering-alo-messenger { background-image: url(https://codfe.com/wp-content/uploads/2020/08/messenger.png) !important; background-color: #e60f1e !important; }
+.footer { background: #F4F4F4; padding: 16px 0 8px; }
+.footer-inner { width: 60%; margin-left: 20%; display: flex; }
+.footer h4 { font-size: 0.875rem; font-weight: 700; margin: 0 0 10px; }
+.footer .cot { width: 33.33%; padding: 12px; font-size: 14px; }
+.footer .dong { margin-bottom: 4px; }
+.footer .ban-quyen { text-align: center; border-top: 1px solid #e8e8e8; padding: 10px; font-size: 14px; }

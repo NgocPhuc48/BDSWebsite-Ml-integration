@@ -1,0 +1,49 @@
+@model TinBanDTO
+@{
+    var anh = Model.BatDongSan?.HinhAnhBatDongSan?.ToList() ?? new();
+    var dau = anh.FirstOrDefault()?.LinkHinhAnh ?? "https://placehold.co/800x500?text=BDS";
+    var avatar = Model.NguoiDang?.HinhDaiDien ?? "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+}
+<div class="detail-wrap">
+    <div class="detail-main">
+        <img id="anhChinh" class="cover" src="@dau" alt="" />
+        @if (anh.Count > 1)
+        {
+            <div class="thumbs">
+                @foreach (var item in anh)
+                {
+                    <img src="@item.LinkHinhAnh" alt="" onclick="document.getElementById('anhChinh').src=this.src" />
+                }
+            </div>
+        }
+        <h1 style="font-size:20px;font-weight:550;margin:16px 0 8px">@Model.TieuDe</h1>
+        <hr class="line" />
+        <div style="display:flex">
+            <div style="margin-right:24px"><div style="color:#999;font-size:14px">Mức giá</div><div style="font-weight:550">@HienThi.Tien(Model.GiaBan)</div></div>
+            <div style="margin-right:24px"><div style="color:#999;font-size:14px">Diện tích</div><div style="font-weight:550">@Model.BatDongSan?.DienTich m<sup>2</sup></div></div>
+            <div><div style="color:#999;font-size:14px">Phòng ngủ</div><div style="font-weight:550">@Model.BatDongSan?.SoPhongNgu PN</div></div>
+        </div>
+        <hr class="line" />
+        <h2 style="font-size:16px">Thông tin mô tả</h2>
+        <p style="font-size:14px;line-height:22px">@Model.MoTa</p>
+        <h2 style="font-size:16px">Đặc điểm bất động sản</h2>
+        <div class="meta-row"><div>Diện tích: @Model.BatDongSan?.DienTich m<sup>2</sup></div><div>Số toilet: @Model.BatDongSan?.SoPhongVeSinh</div></div>
+        <hr class="line" />
+        <div class="meta-row"><div>Số phòng ngủ: @Model.BatDongSan?.SoPhongNgu</div><div>Mặt tiền: @Model.BatDongSan?.ChieuNgang m</div></div>
+        <hr class="line" />
+        <div class="meta-row"><div>Chiều dài: @Model.BatDongSan?.ChieuDai m</div><div>Diện tích sử dụng: @Model.BatDongSan?.DienTichSuDung m<sup>2</sup></div></div>
+        <hr class="line" />
+        <p>Địa chỉ: @Model.BatDongSan?.DiaChi</p>
+        <p>Loại: @(Model.BatDongSan == null ? "" : HienThi.LoaiNha(Model.BatDongSan.LoaiBatDongSan))</p>
+    </div>
+    <aside class="detail-side">
+        <div class="seller">
+            <img src="@avatar" alt="" style="height:60px;width:60px;border-radius:50%;object-fit:cover;margin:12px auto 0" />
+            <p style="font-size:12px;color:#999;text-align:center;margin:8px 0 0">Được đăng bởi</p>
+            <p style="font-size:14px;font-weight:500;text-align:center;margin:8px 0">@Model.NguoiDang?.HoTenNguoiDung</p>
+            <button type="button" class="phone-btn" onclick="this.textContent='@Model.SoDienThoai'">Bấm để hiện số</button>
+            <a class="zalo-btn" href="https://zalo.me/@Model.SoDienThoai" target="_blank">Chat qua Zalo</a>
+        </div>
+    </aside>
+</div>
+<partial name="_Footer" />

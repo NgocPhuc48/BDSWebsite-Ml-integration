@@ -1,0 +1,30 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Đặt lại mật khẩu</title>
+    <link rel="stylesheet" href="~/css/login.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body style="margin:0">
+    <div class="login-container">
+        <div class="login-banner"><div class="login-pannel"><img src="~/img/login3.png" alt="" /></div></div>
+        <div class="login-option">
+            <form class="login-option-site" method="post">
+                @Html.AntiForgeryToken()
+                <img src="https://static.chotot.com/storage/APP_WRAPPER/logo/pty-logo-appwrapper.png" alt="" />
+                <h3>Đặt lại mật khẩu</h3>
+                @if (ViewBag.Loi != null) { <p class="loi">@ViewBag.Loi</p> }
+                <label>Mã</label>
+                <input name="code" value="@ViewBag.Code" required />
+                <label>Mật khẩu mới</label>
+                <input name="matKhauMoi" type="password" required />
+                <button class="nut" type="submit">Xác nhận</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

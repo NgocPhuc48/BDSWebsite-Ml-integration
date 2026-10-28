@@ -1,0 +1,38 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Đăng nhập</title>
+    <link rel="stylesheet" href="~/css/login.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body style="margin:0">
+    <div class="login-container">
+        <div class="login-banner">
+            <div class="login-pannel">
+                <img src="~/img/login3.png" alt="" />
+            </div>
+        </div>
+        <div class="login-option">
+            <form class="login-option-site" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                <img src="https://static.chotot.com/storage/APP_WRAPPER/logo/pty-logo-appwrapper.png" alt="" />
+                <p>Nhà là phải tốt nhất</p>
+                @if (ViewBag.Loi != null) { <p class="loi">@ViewBag.Loi</p> }
+                @if (TempData["ThongBao"] != null) { <p>@TempData["ThongBao"]</p> }
+                <label>Tên tài khoản</label>
+                <input name="taiKhoan" required />
+                <label>Mật khẩu</label>
+                <input name="matKhau" type="password" required />
+                <a asp-action="Forgot">Quên mật khẩu</a>
+                <button class="nut" type="submit">Đăng nhập</button>
+                <span class="span">Bạn chưa có tài khoản? <a asp-action="Register">Đăng ký</a></span>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

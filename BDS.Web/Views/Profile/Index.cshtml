@@ -1,0 +1,83 @@
+@model NguoiDungDTO
+@{
+    var tin = (List<TinBanDTO>)ViewBag.Tin;
+    var tab = (Context.Request.Query["tab"].ToString()) switch
+    {
+        "tindang" => "tindang",
+        "naptien" => "naptien",
+        "security" => "security",
+        _ => "profile"
+    };
+}
+<div class="profile-wrap">
+    <div class="menu-profile">
+        <a class="@(tab == "profile" ? "active" : "")" href="?tab=profile">Thông tin cá nhân</a>
+        <a class="@(tab == "tindang" ? "active" : "")" href="?tab=tindang">Tin đăng</a>
+        <a class="@(tab == "naptien" ? "active" : "")" href="?tab=naptien">Nạp tiền</a>
+        <a class="@(tab == "security" ? "active" : "")" href="?tab=security">Bảo mật</a>
+    </div>
+    <div class="content-profile">
+        @if (tab == "profile")
+        {
+            <h2>Thông tin cá nhân</h2>
+            <p>Số dư: @HienThi.Tien(Model.SoDu)</p>
+            <form method="post" asp-action="CapNhat" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <label>Họ tên</label>
+                <input class="input-profile" name="hoTenNguoiDung" value="@Model.HoTenNguoiDung" required />
+                <label>Điện thoại</label>
+                <input class="input-profile" name="soDienThoai" value="@Model.SoDienThoai" />
+                <label>Căn cước</label>
+                <input class="input-profile" name="soCanCuoc" value="@Model.SoCanCuoc" />
+                <label>Địa chỉ</label>
+                <input class="input-profile" name="diaChi" value="@Model.DiaChi" />
+                <label>Ảnh đại diện</label>
+                <input name="anh" type="file" accept="image/*" />
+                <p><button type="submit">Lưu hồ sơ</button></p>
+            </form>
+        }
+        else if (tab == "tindang")
+        {
+            <h2>Tin đăng của tôi</h2>
+            <table>
+                <tr><th>Tiêu đề</th><th>Trạng thái</th><th>Hết hạn</th><th>Gia hạn</th></tr>
+                @foreach (var item in tin)
+                {
+                    <tr>
+                        <td><a href="/bds/@item.Id">@item.TieuDe</a></td>
+                        <td>@HienThi.TrangThaiTin(item.TrangThai)</td>
+                        <td>@item.NgayHetHan?.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <form method="post" asp-action="GiaHan">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="tinBanId" value="@item.Id" />
+                                <input type="date" name="ngayHet" required />
+                                <button type="submit">Gia hạn</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </table>
+        }
+        else if (tab == "naptien")
+        {
+            <h2>Nạp tiền</h2>
+            <p>Số dư: @HienThi.Tien(Model.SoDu)</p>
+            <form method="post" asp-action="NapTien">
+                @Html.AntiForgeryToken()
+                <input class="input-profile" name="soTien" type="number" min="10000" placeholder="Số tiền" required />
+                <p><button type="submit">Nạp qua VNPay</button></p>
+            </form>
+        }
+        else
+        {
+            <h2>Đổi mật khẩu</h2>
+            <form method="post" asp-action="DoiMatKhau">
+                @Html.AntiForgeryToken()
+                <input class="input-profile" name="matKhauCu" type="password" placeholder="Mật khẩu cũ" required />
+                <input class="input-profile" name="matKhauMoi" type="password" placeholder="Mật khẩu mới" required />
+                <p><button type="submit">Đổi mật khẩu</button></p>
+            </form>
+        }
+    </div>
+</div>

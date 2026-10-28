@@ -1,0 +1,17 @@
+@model TinBanDTO
+@{
+    var cuoi = ViewData["Cuoi"] as bool? == true;
+    var anh = HienThi.AnhDau(Model.BatDongSan);
+    var gia = Model.BatDongSan?.GiaBan ?? Model.GiaBan;
+}
+<a class="the-tin" href="/bds/@Model.Id" style="margin-right:@(cuoi ? "0" : "30px")">
+    <div class="anh">
+        <img src="@(anh ?? "https://placehold.co/400x300?text=BDS")" alt="" />
+    </div>
+    <div class="than hover">
+        <p style="font-weight:550;margin:0">@HienThi.Cat(Model.TieuDe)</p>
+        <p class="gia">@HienThi.Tien(gia) - @Model.BatDongSan?.DienTich m<sup>2</sup></p>
+        <p style="margin:6px 0 0;font-size:14px">⌖ @Model.BatDongSan?.DiaChi</p>
+        <p style="margin:6px 0 0;font-size:12px;color:#999">@HienThi.ThoiGian(Model.NgayTao)</p>
+    </div>
+</a>
