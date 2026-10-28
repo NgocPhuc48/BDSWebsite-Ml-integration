@@ -1,0 +1,36 @@
+@page "/Tin/Dang"
+<div class="trang-dang">
+    <h1>Đăng ký Đăng tin</h1>
+    <form method="get" action="/Tin/Dang" enctype="multipart/form-data" onsubmit="return false">
+        <label>Tên chủ nhà</label>
+        <input name="tenChuNha" required />
+        <label>Tiêu đề</label>
+        <input name="tieuDe" required />
+        <label>Địa chỉ</label>
+        <input name="diaChi" required />
+        <label>Tỉnh</label>
+        <select name="provinceCode">
+            <option value="">Chọn tỉnh</option>
+            <option value="01">Hà Nội</option>
+            <option value="48">Đà Nẵng</option>
+            <option value="79">TP. Hồ Chí Minh</option>
+            <option value="40">Nghệ An</option>
+            <option value="42">Hà Tĩnh</option>
+        </select>
+        <label>Giá bán</label>
+        <input name="giaBan" type="number" required />
+        <label>Diện tích</label>
+        <input name="dienTich" type="number" step="0.1" />
+        <label>Số phòng ngủ</label>
+        <input name="soPhongNgu" type="number" />
+        <label>Số nhà vệ sinh</label>
+        <input name="soPhongVeSinh" type="number" />
+        <label>Số điện thoại</label>
+        <input name="soDienThoai" required />
+        <label>Mô tả</label>
+        <textarea name="moTa" rows="4" required></textarea>
+        <label>Hình ảnh (tối đa 5)</label>
+        <input name="anh" type="file" accept="image/*" multiple />
+        <p><button type="submit">Đăng tin</button></p>
+    </form>
+</div>

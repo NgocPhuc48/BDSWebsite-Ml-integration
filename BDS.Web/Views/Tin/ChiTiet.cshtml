@@ -1,0 +1,40 @@
+@page "/bds/{id?}"
+<div class="detail-wrap">
+    <div class="detail-main">
+        <img id="anhChinh" class="cover" src="~/img/3.jpg" alt="" />
+        <div class="thumbs">
+            <img src="~/img/1.png" alt="" onclick="document.getElementById('anhChinh').src=this.src" />
+            <img src="~/img/2.png" alt="" onclick="document.getElementById('anhChinh').src=this.src" />
+            <img src="~/img/3.jpg" alt="" onclick="document.getElementById('anhChinh').src=this.src" />
+        </div>
+        <h1 style="font-size:20px;font-weight:550;margin:16px 0 8px">Nhà phố 3 tầng mặt tiền đường Lê Lợi</h1>
+        <hr class="line" />
+        <div style="display:flex">
+            <div style="margin-right:24px"><div style="color:#999;font-size:14px">Mức giá</div><div style="font-weight:550">4.200.000.000 ₫</div></div>
+            <div style="margin-right:24px"><div style="color:#999;font-size:14px">Diện tích</div><div style="font-weight:550">90 m<sup>2</sup></div></div>
+            <div><div style="color:#999;font-size:14px">Phòng ngủ</div><div style="font-weight:550">3 PN</div></div>
+        </div>
+        <hr class="line" />
+        <h2 style="font-size:16px">Thông tin mô tả</h2>
+        <p style="font-size:14px;line-height:22px">Nhà phố mặt tiền, nội thất cơ bản, thích hợp ở hoặc kinh doanh nhỏ. Pháp lý sổ hồng, đường rộng ô tô.</p>
+        <h2 style="font-size:16px">Đặc điểm bất động sản</h2>
+        <div class="meta-row"><div>Diện tích: 90 m<sup>2</sup></div><div>Số toilet: 3</div></div>
+        <hr class="line" />
+        <div class="meta-row"><div>Số phòng ngủ: 3</div><div>Mặt tiền: 5 m</div></div>
+        <hr class="line" />
+        <div class="meta-row"><div>Chiều dài: 18 m</div><div>Diện tích sử dụng: 220 m<sup>2</sup></div></div>
+        <hr class="line" />
+        <p>Địa chỉ: 120 Lê Lợi, Hải Châu, Đà Nẵng</p>
+        <p>Loại: Nhà phố</p>
+    </div>
+    <aside class="detail-side">
+        <div class="seller">
+            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="" style="height:60px;width:60px;border-radius:50%;object-fit:cover;margin:12px auto 0" />
+            <p style="font-size:12px;color:#999;text-align:center;margin:8px 0 0">Được đăng bởi</p>
+            <p style="font-size:14px;font-weight:500;text-align:center;margin:8px 0">Nguyễn Văn A</p>
+            <button type="button" class="phone-btn" onclick="this.textContent='0901234567'">Bấm để hiện số</button>
+            <a class="zalo-btn" href="https://zalo.me/0901234567" target="_blank">Chat qua Zalo</a>
+        </div>
+    </aside>
+</div>
+<partial name="_Footer" />

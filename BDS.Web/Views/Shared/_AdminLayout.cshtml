@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Quản trị - Nhà Tốt</title>
+    <link rel="stylesheet" href="~/css/admin-header.css" />
+    <link rel="stylesheet" href="~/css/admin-body.css" />
+    <link rel="stylesheet" href="~/css/menu.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body style="margin:0;background:#F3F5F9">
+    @{
+        var path = ViewContext.HttpContext.Request.Path.Value ?? "";
+    }
+    <div class="header-admin-container">
+        <a class="shop-logo" href="/">
+            <img src="https://static.chotot.com/storage/APP_WRAPPER/logo/pty-logo-appwrapper.png" alt="logo" />
+        </a>
+        <div class="user">
+            <div class="user-detail">
+                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="" />
+                <div class="detail">
+                    <span class="name">Nguyễn Văn A</span>
+                    <span class="role">Quản trị</span>
+                </div>
+            </div>
+            <a href="/Account/Login" style="font-size:14px;text-decoration:none">Đăng xuất</a>
+        </div>
+    </div>
+    <div class="menu-container admin-menu">
+        <a class="@(path.Contains("nguoidung", StringComparison.OrdinalIgnoreCase) ? "active" : "")" href="/Admin/NguoiDung">Quản lý người dùng</a>
+        <a class="@(path.Contains("phongban", StringComparison.OrdinalIgnoreCase) ? "active" : "")" href="/Admin/PhongBan">Quản lý phòng ban</a>
+    </div>
+    <div class="body-container">
+        <div class="content">
+            @RenderBody()
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+@page "/Admin/PhongBan"
+@{
+    Layout = "_AdminLayout";
+}
+<div class="admin-card" style="margin-bottom:16px">
+    <h2 style="margin-top:0;font-size:16px">Thêm phòng ban</h2>
+    <form method="get" action="/Admin/PhongBan" onsubmit="return false">
+        <input name="tenPhongBan" placeholder="Tên phòng ban" required />
+        <input name="khauHieu" placeholder="Khẩu hiệu" required />
+        <select name="truongPhongId" required>
+            <option value="">Trưởng phòng</option>
+            <option value="1">Nguyễn Văn A (admin)</option>
+            <option value="2">Trần Thị B (nhanvien)</option>
+        </select>
+        <button type="submit">Thêm</button>
+    </form>
+</div>
+<div class="admin-card">
+    <h2 style="margin-top:0;font-size:16px">Danh sách phòng ban</h2>
+    <table>
+        <tr><th>Tên</th><th>Trưởng phòng</th><th>Thành viên</th><th>Sửa / xóa</th></tr>
+        <tr>
+            <td>Kinh doanh</td>
+            <td>Nguyễn Văn A</td>
+            <td>8</td>
+            <td>
+                <form method="get" action="/Admin/PhongBan" onsubmit="return false">
+                    <input name="tenPhongBan" value="Kinh doanh" required />
+                    <input name="khauHieu" value="Bán nhà tốt mỗi ngày" required />
+                    <input name="truongPhongId" type="number" value="1" required />
+                    <select name="trangThai">
+                        <option value="1" selected>Đang hoạt động</option>
+                        <option value="2">Khóa</option>
+                    </select>
+                    <button type="submit">Lưu</button>
+                </form>
+                <form method="get" action="/Admin/PhongBan" onsubmit="return false">
+                    <button class="xoa" type="submit">Xóa</button>
+                </form>
+            </td>
+        </tr>
+        <tr>
+            <td>Hành chính</td>
+            <td>Trần Thị B</td>
+            <td>3</td>
+            <td>
+                <form method="get" action="/Admin/PhongBan" onsubmit="return false">
+                    <input name="tenPhongBan" value="Hành chính" required />
+                    <input name="khauHieu" value="Gọn việc, rõ người" required />
+                    <input name="truongPhongId" type="number" value="2" required />
+                    <select name="trangThai">
+                        <option value="1" selected>Đang hoạt động</option>
+                        <option value="2">Khóa</option>
+                    </select>
+                    <button type="submit">Lưu</button>
+                </form>
+                <form method="get" action="/Admin/PhongBan" onsubmit="return false">
+                    <button class="xoa" type="submit">Xóa</button>
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>

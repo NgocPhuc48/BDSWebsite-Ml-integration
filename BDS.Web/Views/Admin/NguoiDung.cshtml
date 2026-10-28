@@ -1,0 +1,73 @@
+@page "/Admin/NguoiDung"
+@{
+    Layout = "_AdminLayout";
+}
+<div class="admin-card" style="margin-bottom:16px">
+    <h2 style="margin-top:0;font-size:16px">Thêm người dùng</h2>
+    <form method="get" action="/Admin/NguoiDung" onsubmit="return false">
+        <input name="hoTenNguoiDung" placeholder="Họ tên" required />
+        <input name="tenTaiKhoan" placeholder="Tài khoản" required />
+        <input name="matKhau" type="password" placeholder="Mật khẩu" required />
+        <input name="soDienThoai" placeholder="Điện thoại" />
+        <select name="phongBanId">
+            <option value="">Phòng ban</option>
+            <option value="1">Kinh doanh</option>
+            <option value="2">Hành chính</option>
+        </select>
+        <button type="submit">Thêm</button>
+    </form>
+</div>
+<div class="admin-card">
+    <h2 style="margin-top:0;font-size:16px">Danh sách người dùng</h2>
+    <table>
+        <tr><th>Tài khoản</th><th>Họ tên</th><th>Role</th><th>Sửa</th></tr>
+        <tr>
+            <td>admin</td>
+            <td>Nguyễn Văn A</td>
+            <td>ADMIN</td>
+            <td>
+                <form method="get" action="/Admin/NguoiDung" onsubmit="return false">
+                    <input name="hoTenNguoiDung" value="Nguyễn Văn A" required />
+                    <input name="matKhau" type="password" placeholder="Mật khẩu mới" />
+                    <input name="soDienThoai" value="0901234567" />
+                    <input name="soCanCuoc" value="012345678901" placeholder="Căn cước" />
+                    <input name="diaChi" value="Hải Châu, Đà Nẵng" placeholder="Địa chỉ" />
+                    <select name="phongBanId">
+                        <option value="">Phòng ban</option>
+                        <option value="1" selected>Kinh doanh</option>
+                        <option value="2">Hành chính</option>
+                    </select>
+                    <div>
+                        <label style="margin-right:8px"><input type="checkbox" name="roleIds" value="1" checked /> ADMIN</label>
+                        <label style="margin-right:8px"><input type="checkbox" name="roleIds" value="2" /> NHANVIEN</label>
+                    </div>
+                    <button type="submit">Lưu</button>
+                </form>
+            </td>
+        </tr>
+        <tr>
+            <td>nhanvien</td>
+            <td>Trần Thị B</td>
+            <td>NHANVIEN</td>
+            <td>
+                <form method="get" action="/Admin/NguoiDung" onsubmit="return false">
+                    <input name="hoTenNguoiDung" value="Trần Thị B" required />
+                    <input name="matKhau" type="password" placeholder="Mật khẩu mới" />
+                    <input name="soDienThoai" value="0912345678" />
+                    <input name="soCanCuoc" placeholder="Căn cước" />
+                    <input name="diaChi" value="Sơn Trà, Đà Nẵng" placeholder="Địa chỉ" />
+                    <select name="phongBanId">
+                        <option value="">Phòng ban</option>
+                        <option value="1">Kinh doanh</option>
+                        <option value="2" selected>Hành chính</option>
+                    </select>
+                    <div>
+                        <label style="margin-right:8px"><input type="checkbox" name="roleIds" value="1" /> ADMIN</label>
+                        <label style="margin-right:8px"><input type="checkbox" name="roleIds" value="2" checked /> NHANVIEN</label>
+                    </div>
+                    <button type="submit">Lưu</button>
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>

@@ -1,0 +1,20 @@
+@{
+    var cuoi = ViewData["Cuoi"] as bool? == true;
+    var anh = ViewData["Anh"] as string ?? "https://placehold.co/400x300?text=BDS";
+    var tieuDe = ViewData["TieuDe"] as string ?? "";
+    var gia = ViewData["Gia"] as string ?? "";
+    var dienTich = ViewData["DienTich"] as string ?? "";
+    var diaChi = ViewData["DiaChi"] as string ?? "";
+    var thoiGian = ViewData["ThoiGian"] as string ?? "";
+}
+<a class="the-tin" href="/bds/1" style="margin-right:@(cuoi ? "0" : "30px")">
+    <div class="anh">
+        <img src="@anh" alt="" />
+    </div>
+    <div class="than hover">
+        <p style="font-weight:550;margin:0">@tieuDe</p>
+        <p class="gia">@gia - @dienTich m<sup>2</sup></p>
+        <p style="margin:6px 0 0;font-size:14px">⌖ @diaChi</p>
+        <p style="margin:6px 0 0;font-size:12px;color:#999">@thoiGian</p>
+    </div>
+</a>
