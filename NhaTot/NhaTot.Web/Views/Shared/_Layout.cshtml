@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NhaTot.vn | Cổng thông tin Bất động sản Nghệ An</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    
+    <!-- Leaflet GIS Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        /* Modern Header Navbar */
+        .navbar-nhatot {
+            background: #ffffff;
+            border-bottom: 1px solid #e9ecef;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+        .navbar-brand-logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #0d6efd;
+            letter-spacing: -0.5px;
+        }
+        .nav-link-custom {
+            font-weight: 500;
+            color: #495057;
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .nav-link-custom:hover {
+            color: #0d6efd;
+            background-color: #f1f5f9;
+        }
+        .btn-post-property {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5253 100%);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(238, 82, 83, 0.25);
+            transition: all 0.2s ease;
+        }
+        .btn-post-property:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(238, 82, 83, 0.35);
+            color: white;
+        }
+        /* Header & Dropdown z-index fix */
+        header.sticky-top {
+            z-index: 1050 !important;
+            position: sticky !important;
+            top: 0 !important;
+        }
+        .navbar-nhatot .dropdown-menu {
+            z-index: 1060 !important;
+        }
+        /* Footer styling */
+        footer {
+            background-color: #0f172a;
+            color: #94a3b8;
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky-top" style="z-index: 1020;">
+        <nav class="navbar navbar-expand-lg navbar-nhatot py-2">
+            <div class="container">
+                <!-- Logo -->
+                <a class="navbar-brand d-flex align-items-center" href="/">
+                    <span class="navbar-brand-logo">NhaTot<span class="text-danger">.vn</span></span>
+                </a>
+
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <!-- Left Nav Menu -->
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom" href="/"><i class="bi bi-house me-1"></i>Trang chủ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom" href="/?LoaiGiaoDich=BAN">Bất động sản bán</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom" href="/?LoaiGiaoDich=CHO_THUE">Cho thuê</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom text-primary fw-semibold" href="/DinhGia"><i class="bi bi-cpu me-1"></i>Định giá AI</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom text-danger fw-semibold" href="#"><i class="bi bi-crosshair me-1"></i>Bẫy giá</a>
+                        </li>
+                    </ul>
+
+                    <!-- Right User Control -->
+                    <div class="d-flex align-items-center gap-2">
+
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <!-- TRẠNG THÁI: ĐÃ ĐĂNG NHẬP -->
+                            
+                            <!-- 1. Hiển thị Ví điểm của tài khoản -->
+                            <a href="/NguoiDung/QuanLyVi" class="text-decoration-none d-none d-md-flex align-items-center px-3 py-1 bg-light rounded-pill border">
+                                <i class="bi bi-wallet2 text-warning me-2"></i>
+                                <span class="small fw-semibold text-dark">@string.Format("{0:N0} đ", ViewBag.SoDuVi ?? 0)</span>
+                            </a>
+
+                            <!-- 2. Menu thả xuống cho User đã đăng nhập -->
+                            <div class="dropdown">
+                                <button class="btn btn-light rounded-circle p-2 shadow-sm border" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle fs-5 text-primary"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2">
+                                    <li><h6 class="dropdown-header">Xin chào, <strong>@User.Identity.Name</strong></h6></li>
+                                    <li><a class="dropdown-item" href="/NguoiDung/QuanLyTin"><i class="bi bi-journal-text me-2"></i>Quản lý tin đăng</a></li>
+                                    <li><a class="dropdown-item" href="/NguoiDung/LichHen"><i class="bi bi-calendar-check me-2"></i>Lịch hẹn xem nhà</a></li>
+                                    <li><a class="dropdown-item" href="/NguoiDung/LichSuGiaoDich"><i class="bi bi-wallet2 me-2"></i>Lịch sử ví điểm</a></li>
+                                    <li><a class="dropdown-item" href="/NguoiDung/TinDaLuu"><i class="bi bi-heart me-2"></i>Tin đã lưu</a></li>
+                                    
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger fw-bold" href="/Admin/Dashboard"><i class="bi bi-shield-lock me-2"></i>Trang Quản trị Admin</a></li>
+                                    }
+                                    
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" action="/TaiKhoan/DangXuat">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="dropdown-item text-secondary"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- 3. Nút Đăng tin dành cho User đã đăng nhập -->
+                            <a href="/TinDang/DangTin" class="btn btn-post-property">
+                                <i class="bi bi-plus-circle me-1"></i> Đăng tin mới
+                            </a>
+                        }
+                        else
+                        {
+                            <!-- TRẠNG THÁI: CHƯA ĐĂNG NHẬP -->
+                            
+                            <a href="/TaiKhoan/DangNhap" class="btn btn-outline-primary fw-semibold px-3 rounded-pill">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập
+                            </a>
+                            <a href="/TaiKhoan/DangKy" class="btn btn-primary fw-semibold px-3 rounded-pill">
+                                Đăng ký
+                            </a>
+                            <!-- Nút Đăng tin chuyển hướng đăng nhập chuẩn -->
+                            <a href="/TaiKhoan/DangNhap?returnUrl=/TinDang/DangTin" class="btn btn-post-property d-none d-md-inline-block">
+                                <i class="bi bi-plus-circle me-1"></i> Đăng tin
+                            </a>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main role="main" class="flex-grow-1">
+        @RenderBody()
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="pt-5 pb-4 mt-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <h5 class="fw-bold text-white mb-3">NhaTot<span class="text-danger">.vn</span></h5>
+                    <p class="small">Kênh thông tin và định giá Bất động sản ứng dụng AI hàng đầu tại Nghệ An. Dữ liệu minh bạch, tìm kiếm thông minh.</p>
+                </div>
+                <div class="col-6 col-md-2">
+                    <h6 class="fw-bold text-white mb-3">Về NhaTot</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Giới thiệu</a></li>
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Quy định sử dụng</a></li>
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Chính sách bảo mật</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold text-white mb-3">Khu vực trọng điểm</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Bất động sản TP Vinh</a></li>
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Đất nền Thị xã Cửa Lò</a></li>
+                        <li class="mb-2"><a href="#" class="text-reset text-decoration-none">Nhà đất Huyện Nghi Lộc</a></li>
+                    </ul>
+                </div>
+                <div class="col-12 col-md-3">
+                    <h6 class="fw-bold text-white mb-3">Tổng đài hỗ trợ</h6>
+                    <p class="h5 fw-bold text-danger mb-1"><i class="bi bi-telephone-outbound me-2"></i>1900 6868</p>
+                    <small class="d-block">Email: support@nhatot.vn</small>
+                </div>
+            </div>
+            <hr class="border-secondary my-4" />
+            <div class="text-center small">
+                © 2026 NhaTot.vn - Bản quyền thuộc về Đồ án Hệ thống Bất động sản Thông minh.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap & Leaflet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

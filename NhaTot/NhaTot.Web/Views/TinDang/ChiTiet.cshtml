@@ -1,0 +1,325 @@
+@model NhaTot.Web.Models.ChiTietTinDangViewModel
+
+@{
+    ViewData["Title"] = Model.TinDang?.TieuDe ?? "Chi tiết tin đăng";
+    
+    // Xử lý danh sách ảnh từ chuỗi phân tách bằng dấu phẩy, chấm phẩy hoặc khoảng trắng
+    var dsAnh = !string.IsNullOrEmpty(Model.TinDang?.DanhSachAnhDatDai)
+        ? Model.TinDang.DanhSachAnhDatDai.Split(new[] { ',', ';', '|', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+        : new List<string>();
+
+    var tenNguoiDang = Model.NguoiDang?.HoTen;
+    var chuCai = !string.IsNullOrEmpty(tenNguoiDang) ? tenNguoiDang[0].ToString().ToUpper() : "U";
+}
+
+<div class="container my-4">
+    <div class="row">
+        <!-- Cột trái -->
+        <div class="col-lg-8">
+            <h2 class="fw-bold mb-3">@Model.TinDang?.TieuDe</h2>
+            <p class="text-muted"><i class="bi bi-geo-alt-fill"></i> @(Model.BatDongSan?.DiaChiMoTa ?? "Chưa cập nhật địa chỉ")</p>
+
+            <!-- Hình ảnh -->
+            <div class="mb-4">
+                @if (dsAnh.Any())
+                {
+                    <img id="anhChinh" src="@dsAnh[0]" class="img-fluid rounded w-100" style="max-height: 450px; object-fit: cover;" alt="Hình ảnh" />
+                    @if (dsAnh.Count > 1)
+                    {
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            @foreach (var a in dsAnh)
+                            {
+                                <img src="@a" class="rounded" style="width:80px;height:60px;object-fit:cover;cursor:pointer;"
+                                     onclick="document.getElementById('anhChinh').src=this.src" alt="Ảnh nhỏ" />
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="bg-secondary text-white text-center py-5 rounded">Không có hình ảnh</div>
+                }
+            </div>
+
+            <!-- Giá & định giá AI -->
+            <div class="card mb-4 border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted d-block">Giá rao bán:</span>
+                            <h3 class="text-danger fw-bold m-0">
+                                @(Model.TinDang?.GiaRaoVnd.HasValue == true ? Model.TinDang.GiaRaoVnd.Value.ToString("N0") + " VNĐ" : "Thỏa thuận")
+                            </h3>
+                        </div>
+
+                        @if (Model.GiaDinhGiaAi.HasValue)
+                        {
+                            <div class="text-end">
+                                <span class="badge bg-info text-dark mb-1">Định giá AI đề xuất</span>
+                                <h4 class="text-primary fw-bold m-0">@Model.GiaDinhGiaAi.Value.ToString("N0") VNĐ</h4>
+                            </div>
+                        }
+                    </div>
+
+                    @if (Model.MucChechLechGia.HasValue && Model.PhamViChechLechPhanTram.HasValue)
+                    {
+                        <hr />
+                        <div class="alert @(Model.MucChechLechGia > 0 ? "alert-warning" : "alert-success") mb-0">
+                            @if (Model.MucChechLechGia > 0)
+                            {
+                                <span>Giá rao cao hơn định giá AI khoảng <strong>@Model.MucChechLechGia.Value.ToString("N0") VNĐ</strong> (@Model.PhamViChechLechPhanTram.Value.ToString("N1")%).</span>
+                            }
+                            else
+                            {
+                                <span>Giá rao thấp hơn định giá AI khoảng <strong>@Math.Abs(Model.MucChechLechGia.Value).ToString("N0") VNĐ</strong> (@Model.PhamViChechLechPhanTram.Value.ToString("N1")%).</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Mô tả -->
+            <div class="card mb-4">
+                <div class="card-header bg-white fw-bold">Mô tả chi tiết</div>
+                <div class="card-body">
+                    <p style="white-space: pre-line;">@Model.TinDang?.MoTa</p>
+                </div>
+            </div>
+
+            <!-- Thông tin nhà ở -->
+            @if (Model.ChiTietNha != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-white fw-bold">Thông tin nhà ở</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-2">Số tầng: <strong>@(Model.ChiTietNha.SoTang?.ToString() ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Phòng ngủ: <strong>@(Model.ChiTietNha.SoPhongNgu?.ToString() ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Phòng vệ sinh: <strong>@(Model.ChiTietNha.SoWc?.ToString() ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Năm xây dựng: <strong>@(Model.ChiTietNha.NamXayDung?.ToString() ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Tình trạng: <strong>@(Model.ChiTietNha.TinhTrangNha ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Nội thất: <strong>@(Model.ChiTietNha.NoiThat ?? "—")</strong></div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Thông tin đất -->
+            @if (Model.ChiTietDat != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-white fw-bold">Thông tin đất</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-2">Loại đất: <strong>@(Model.ChiTietDat.LoaiDat ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Mặt tiền: <strong>@(Model.ChiTietDat.MatTienM?.ToString("N1") ?? "—") m</strong></div>
+                            <div class="col-6 mb-2">Chiều sâu: <strong>@(Model.ChiTietDat.ChieuSauM?.ToString("N1") ?? "—") m</strong></div>
+                            <div class="col-6 mb-2">Loại đường: <strong>@(Model.ChiTietDat.LoaiDuong ?? "—")</strong></div>
+                            <div class="col-6 mb-2">Độ rộng đường: <strong>@(Model.ChiTietDat.DoRongDuongM?.ToString("N1") ?? "—") m</strong></div>
+                            <div class="col-6 mb-2">Hình dạng: <strong>@(Model.ChiTietDat.HinhDang ?? "—")</strong></div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Tin liên quan -->
+            @if (Model.DanhSachBdsLienQuan != null && Model.DanhSachBdsLienQuan.Any())
+            {
+                <h5 class="fw-bold mb-3">Tin đăng liên quan</h5>
+                <div class="row">
+                    @foreach (var item in Model.DanhSachBdsLienQuan)
+                    {
+                        var anhLq = (item.AnhDaiDien ?? "")
+                            .Split(new[] { ',', ';', '|', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .FirstOrDefault();
+                        <div class="col-md-6 mb-3">
+                            <a href="@Url.Action("ChiTiet", "TinDang", new { id = item.MaTin })" class="text-decoration-none text-dark">
+                                <div class="card h-100">
+                                    @if (!string.IsNullOrEmpty(anhLq))
+                                    {
+                                        <img src="@anhLq" class="card-img-top" style="height:140px;object-fit:cover;" alt="@item.TieuDe" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="height: 140px;">
+                                            <i class="bi bi-image fs-3 text-secondary"></i>
+                                        </div>
+                                    }
+                                    <div class="card-body">
+                                        <h6 class="card-title">@item.TieuDe</h6>
+                                        <div class="text-danger fw-bold">
+                                            @(item.GiaRaoVnd.HasValue ? item.GiaRaoVnd.Value.ToString("N0") + " VNĐ" : "Thỏa thuận")
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Cột phải -->
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow-sm border-0 rounded-4" style="position: sticky; top: 90px; z-index: 10;">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold">Thông tin người đăng</h5>
+                    <div class="d-flex align-items-center my-3">
+                        <div class="bg-primary text-white rounded-circle text-center me-3" style="width:50px; height:50px; line-height:50px; font-size:20px;">
+                            @chuCai
+                        </div>
+                        <div>
+                            <h6 class="m-0 fw-bold">@(string.IsNullOrWhiteSpace(tenNguoiDang) ? "Người dùng" : tenNguoiDang)</h6>
+                            <small class="text-muted">@(Model.NguoiDang?.SoDienThoai ?? "Chưa cập nhật SĐT")</small>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalDatLich">
+                        <i class="bi bi-calendar-check me-1"></i> Đặt lịch hẹn xem
+                    </button>
+                    <button class="btn btn-outline-secondary w-100 mb-2" onclick="luuTinYeuThich(@Model.TinDang?.MaTin)">
+                        <i class="bi bi-heart me-1"></i> Lưu tin yêu thích
+                    </button>
+                    <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#modalBaoCao">
+                        <i class="bi bi-flag me-1"></i> Báo cáo vi phạm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Đặt lịch hẹn -->
+<div class="modal fade" id="modalDatLich" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Đặt lịch hẹn xem bất động sản</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formDatLich">
+                    <input type="hidden" id="datLichMaTin" value="@Model.TinDang?.MaTin" />
+                    <div class="row">
+                        <div class="col-7 mb-3">
+                            <label class="form-label">Chọn ngày xem</label>
+                            <input type="date" class="form-control" id="datLichNgay" required />
+                        </div>
+                        <div class="col-5 mb-3">
+                            <label class="form-label">Giờ</label>
+                            <input type="time" class="form-control" id="datLichGio" value="09:00" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" id="datLichGhiChu" rows="3"></textarea>
+                    </div>
+                    <button type="button" onclick="submitDatLich()" class="btn btn-primary w-100">Xác nhận đặt lịch</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Báo cáo vi phạm -->
+<div class="modal fade" id="modalBaoCao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Báo cáo vi phạm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formBaoCao">
+                    <input type="hidden" id="baoCaoMaTin" value="@Model.TinDang?.MaTin" />
+                    <div class="mb-3">
+                        <label class="form-label">Lý do vi phạm</label>
+                        <select class="form-select" id="baoCaoLyDo" required>
+                            <option value="">-- Chọn lý do --</option>
+                            <option value="Thông tin sai sự thật">Thông tin sai sự thật</option>
+                            <option value="Giá rao không đúng">Giá rao không đúng</option>
+                            <option value="SĐT không liên lạc được">SĐT không liên lạc được</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả chi tiết</label>
+                        <textarea class="form-control" id="baoCaoMoTa" rows="3"></textarea>
+                    </div>
+                    <button type="button" onclick="submitBaoCao()" class="btn btn-danger w-100">Gửi báo cáo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function postJson(url, payload) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: 'Có lỗi xảy ra, vui lòng thử lại.' };
+            }
+        }
+
+        const ngayInput = document.getElementById('datLichNgay');
+        if (ngayInput) {
+            ngayInput.min = new Date().toISOString().split('T')[0];
+        }
+
+        async function submitDatLich() {
+            const ngay = document.getElementById('datLichNgay').value;
+            if (!ngay) { alert('Vui lòng chọn ngày hẹn.'); return; }
+
+            const data = await postJson('/TinDang/DatLichHen', {
+                maTin: parseInt(document.getElementById('datLichMaTin').value),
+                ngayHen: ngay,
+                gioHen: document.getElementById('datLichGio').value,
+                ghiChu: document.getElementById('datLichGhiChu').value
+            });
+            if (data.success) {
+                if (confirm(data.message + '\n\nBạn có muốn chuyển đến trang Quản lý Lịch hẹn để theo dõi không?')) {
+                    window.location.href = '/NguoiDung/LichHen';
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function submitBaoCao() {
+            const lyDo = document.getElementById('baoCaoLyDo').value;
+            if (!lyDo) { alert('Vui lòng chọn lý do vi phạm.'); return; }
+
+            const data = await postJson('/TinDang/BaoCaoViPham', {
+                maTin: parseInt(document.getElementById('baoCaoMaTin').value),
+                lyDo: lyDo,
+                moTa: document.getElementById('baoCaoMoTa').value
+            });
+            alert(data.message);
+            if (data.success) location.reload();
+        }
+
+        async function luuTinYeuThich(maTin) {
+            try {
+                const res = await fetch('/Home/ToggleYeuThich', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `maTin=${maTin}`
+                });
+                const data = await res.json();
+                alert(data.message);
+            } catch (e) {
+                alert('Có lỗi xảy ra khi lưu tin!');
+            }
+        }
+    </script>
+}

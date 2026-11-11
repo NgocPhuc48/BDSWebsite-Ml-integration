@@ -1,0 +1,140 @@
+@model IEnumerable<NhaTot.Domain.Entities.BaoCaoTinDang>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Báo cáo Vi phạm";
+    string currentStatus = ViewBag.CurrentStatus ?? "PENDING";
+}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Báo cáo Vi phạm Tin đăng</h3>
+        <p class="text-muted mb-0">Tiếp nhận và xử lý khiếu nại về tin rao ảo, sai sự thật, lừa đảo từ người dùng</p>
+    </div>
+</div>
+
+<!-- Tabs Lọc -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-2">
+        <ul class="nav nav-pills">
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "PENDING" ? "active" : "") fw-semibold" href="/Admin/BaoCaoTinDang?trangThai=PENDING">
+                    <i class="bi bi-hourglass-split me-1"></i> Chờ xử lý <span class="badge bg-warning text-dark ms-1">@ViewBag.CountPending</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "RESOLVED" ? "active" : "") fw-semibold" href="/Admin/BaoCaoTinDang?trangThai=RESOLVED">
+                    <i class="bi bi-check-all me-1"></i> Đã xử lý (Khóa tin) <span class="badge bg-success ms-1">@ViewBag.CountResolved</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "DISMISSED" ? "active" : "") fw-semibold" href="/Admin/BaoCaoTinDang?trangThai=DISMISSED">
+                    <i class="bi bi-slash-circle me-1"></i> Đã bỏ qua <span class="badge bg-secondary ms-1">@ViewBag.CountDismissed</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "ALL" ? "active" : "") fw-semibold" href="/Admin/BaoCaoTinDang?trangThai=ALL">Tất cả báo cáo</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 90px;">Mã BC</th>
+                        <th>Tin đăng bị báo cáo</th>
+                        <th>Lý do báo cáo</th>
+                        <th>Mô tả chi tiết</th>
+                        <th>Người báo cáo</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 200px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr id="row-@item.MaBaoCao">
+                                <td><strong>#@item.MaBaoCao</strong></td>
+                                <td>
+                                    <div class="fw-bold text-dark text-truncate" style="max-width: 220px;">
+                                        #@item.MaTin - @(item.MaTinNavigation?.TieuDe ?? "Tin không tồn tại")
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">@item.LyDo</span></td>
+                                <td><small class="text-muted text-truncate d-inline-block" style="max-width: 200px;">@(item.MoTa ?? "---")</small></td>
+                                <td>
+                                    <div class="fw-semibold">@(item.MaNguoiBaoCaoNavigation?.HoTen ?? "N/A")</div>
+                                </td>
+                                <td><small class="text-muted">@item.NgayBaoCao?.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td>
+                                    @if (item.TrangThai == "RESOLVED")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đã khóa tin</span>
+                                    }
+                                    else if (item.TrangThai == "DISMISSED")
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Đã bỏ qua</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chờ xử lý</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (item.TrangThai == "PENDING")
+                                    {
+                                        <button class="btn btn-sm btn-danger me-1" onclick="processReport(@item.MaBaoCao, 'KHOA_TIN')">
+                                            <i class="bi bi-lock-fill"></i> Khóa tin
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="processReport(@item.MaBaoCao, 'BO_QUA')">
+                                            <i class="bi bi-x-circle"></i> Bỏ qua
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">Đã xử lý bởi Admin</small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Không có báo cáo vi phạm nào.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function processReport(maBaoCao, hanhDong) {
+            const title = hanhDong === 'KHOA_TIN' ? 'KHOÁ TIN ĐĂNG NÀY' : 'BỎ QUA BÁO CÁO NÀY';
+            if (confirm(`Bạn có chắc chắn muốn ${title}?`)) {
+                try {
+                    const res = await fetch('/Admin/BaoCaoTinDang/Process', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ maBaoCao: maBaoCao, hanhDong: hanhDong })
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        location.reload();
+                    } else { alert(result.message); }
+                } catch (e) { alert('Lỗi khi thực hiện!'); }
+            }
+        }
+    </script>
+}

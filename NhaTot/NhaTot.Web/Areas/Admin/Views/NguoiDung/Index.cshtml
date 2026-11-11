@@ -1,0 +1,253 @@
+@model IEnumerable<NhaTot.Domain.Entities.NguoiDung>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Tài khoản & Phân quyền";
+    int? selectedVaiTro = ViewBag.SelectedVaiTro as int?;
+    string? selectedTrangThai = ViewBag.SelectedTrangThai as string;
+}
+
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Quản lý Tài khoản & Phân quyền (RBAC)</h3>
+        <p class="text-muted mb-0">Quản lý danh sách người dùng, vai trò truy cập và trạng thái tài khoản hệ thống</p>
+    </div>
+    
+    <!-- Filter Bar -->
+    <form method="get" class="d-flex gap-2">
+        <select name="vaiTro" class="form-select shadow-sm" onchange="this.form.submit()">
+            <option value="">-- Tất cả vai trò --</option>
+            <option value="1" selected="@(selectedVaiTro == 1)">Khách hàng (@ViewBag.CountUser)</option>
+            <option value="2" selected="@(selectedVaiTro == 2)">Môi giới (@ViewBag.CountBroker)</option>
+            <option value="3" selected="@(selectedVaiTro == 3)">Tư vấn viên (@ViewBag.CountConsultant)</option>
+            <option value="4" selected="@(selectedVaiTro == 4)">Quản trị viên (@ViewBag.CountAdmin)</option>
+        </select>
+
+        <select name="trangThai" class="form-select shadow-sm" onchange="this.form.submit()">
+            <option value="ALL" selected="@(selectedTrangThai == "ALL")">Tất cả trạng thái</option>
+            <option value="ACTIVE" selected="@(selectedTrangThai == "ACTIVE")">Đang hoạt động</option>
+            <option value="LOCKED" selected="@(selectedTrangThai == "LOCKED")">Tạm khóa</option>
+        </select>
+    </form>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Mã</th>
+                        <th>Họ và tên</th>
+                        <th>Email / SĐT</th>
+                        <th>Vai trò (Role)</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end" style="width: 240px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr id="row-@item.MaNguoiDung">
+                                <td><strong>#@item.MaNguoiDung</strong></td>
+                                <td><span class="fw-bold text-dark">@item.HoTen</span></td>
+                                <td>
+                                    <div><i class="bi bi-envelope me-1 text-muted"></i>@item.Email</div>
+                                    <small class="text-muted"><i class="bi bi-telephone me-1"></i>@(string.IsNullOrEmpty(item.SoDienThoai) ? "---" : item.SoDienThoai)</small>
+                                </td>
+                                <td>
+                                    @switch (item.VaiTro)
+                                    {
+                                        case 4:
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 fw-normal"><i class="bi bi-shield-lock me-1"></i>Admin</span>
+                                            break;
+                                        case 3:
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6 fw-normal"><i class="bi bi-headset me-1"></i>Tư vấn viên</span>
+                                            break;
+                                        case 2:
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 fw-normal"><i class="bi bi-briefcase me-1"></i>Môi giới</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-6 fw-normal"><i class="bi bi-person me-1"></i>Khách hàng</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.TrangThai == "ACTIVE")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Đã khóa</span>
+                                    }
+                                </td>
+                                <td><small class="text-muted">@item.NgayTao?.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="openRoleModal(@item.MaNguoiDung, '@item.HoTen', @item.VaiTro)" title="Phân quyền">
+                                        <i class="bi bi-shield-slash"></i> Phân quyền
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="openResetPasswordModal(@item.MaNguoiDung, '@item.HoTen')" title="Đổi mật khẩu">
+                                        <i class="bi bi-key"></i> Pass
+                                    </button>
+                                    <button class="btn btn-sm @(item.TrangThai == "ACTIVE" ? "btn-outline-danger" : "btn-outline-success")" onclick="toggleStatus(@item.MaNguoiDung, '@item.HoTen', '@item.TrangThai')">
+                                        <i class="bi @(item.TrangThai == "ACTIVE" ? "bi-lock" : "bi-unlock")"></i> @(item.TrangThai == "ACTIVE" ? "Khóa" : "Mở")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Không tìm thấy tài khoản phù hợp.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Phân Quyền (Change Role) -->
+<div class="modal fade" id="roleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Phân quyền tài khoản</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <input type="hidden" id="roleUserId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tài khoản:</label>
+                    <input type="text" id="roleUserName" class="form-control bg-light" readonly />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Chọn vai trò truy cập <span class="text-danger">*</span></label>
+                    <select id="roleSelect" class="form-select">
+                        <option value="1">1 - Khách hàng cá nhân (User)</option>
+                        <option value="2">2 - Nhà môi giới BĐS (Broker)</option>
+                        <option value="3">3 - Tư vấn viên hệ thống (Consultant)</option>
+                        <option value="4">4 - Quản trị viên (Admin)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary px-4" onclick="saveRole()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Đặt Lại Mật Khẩu -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-warning">Đặt lại Mật khẩu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <input type="hidden" id="passUserId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tài khoản:</label>
+                    <input type="text" id="passUserName" class="form-control bg-light" readonly />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mật khẩu mới <span class="text-danger">*</span></label>
+                    <input type="password" id="newPassword" class="form-control" placeholder="Nhập mật khẩu mới..." required />
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning px-4" onclick="saveResetPassword()">Cập nhật mật khẩu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const roleModal = new bootstrap.Modal(document.getElementById('roleModal'));
+        const resetPasswordModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+
+        // 1. Mở Modal Phân Quyền
+        function openRoleModal(id, name, currentRole) {
+            document.getElementById('roleUserId').value = id;
+            document.getElementById('roleUserName').value = name;
+            document.getElementById('roleSelect').value = currentRole || 1;
+            roleModal.show();
+        }
+
+        // 2. Lưu thay đổi phân quyền
+        async function saveRole() {
+            const userId = parseInt(document.getElementById('roleUserId').value);
+            const roleId = parseInt(document.getElementById('roleSelect').value);
+
+            try {
+                const res = await fetch('/Admin/NguoiDung/UpdateRole', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maNguoiDung: userId, vaiTro: roleId })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    roleModal.hide();
+                    location.reload();
+                } else { alert(result.message); }
+            } catch (e) { alert('Lỗi kết nối máy chủ!'); }
+        }
+
+        // 3. Khóa / Mở khóa tài khoản
+        async function toggleStatus(id, name, currentStatus) {
+            const actionText = currentStatus === 'ACTIVE' ? 'KHÓA' : 'MỞ KHÓA';
+            if (confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản "${name}"?`)) {
+                try {
+                    const res = await fetch(`/Admin/NguoiDung/ToggleStatus/${id}`, { method: 'POST' });
+                    const result = await res.json();
+                    if (result.success) {
+                        location.reload();
+                    } else { alert(result.message); }
+                } catch (e) { alert('Lỗi thực hiện!'); }
+            }
+        }
+
+        // 4. Mở Modal Reset Mật khẩu
+        function openResetPasswordModal(id, name) {
+            document.getElementById('passUserId').value = id;
+            document.getElementById('passUserName').value = name;
+            document.getElementById('newPassword').value = '';
+            resetPasswordModal.show();
+        }
+
+        // 5. Lưu Đặt lại mật khẩu
+        async function saveResetPassword() {
+            const userId = parseInt(document.getElementById('passUserId').value);
+            const newPass = document.getElementById('newPassword').value.trim();
+
+            if (!newPass || newPass.length < 6) {
+                alert('Mật khẩu mới phải có tối thiểu 6 ký tự!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/Admin/NguoiDung/ResetPassword', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maNguoiDung: userId, matKhauMoi: newPass })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert('Đặt lại mật khẩu thành công!');
+                    resetPasswordModal.hide();
+                } else { alert(result.message); }
+            } catch (e) { alert('Lỗi kết nối máy chủ!'); }
+        }
+    </script>
+}

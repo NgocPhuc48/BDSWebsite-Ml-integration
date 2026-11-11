@@ -1,0 +1,401 @@
+@model IEnumerable<NhaTot.Domain.Entities.TinDang>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Kiểm duyệt Tin đăng";
+    string currentStatus = ViewBag.CurrentStatus ?? "PENDING";
+}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Kiểm duyệt Tin đăng</h3>
+        <p class="text-muted mb-0">Quản lý và phê duyệt các bất động sản rao bán / cho thuê trên hệ thống</p>
+    </div>
+</div>
+
+<!-- Tabs Lọc Trạng Thái -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-2">
+        <ul class="nav nav-pills">
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "PENDING" ? "active" : "") fw-semibold" href="/Admin/KiemDuyetTin?trangThai=PENDING">
+                    <i class="bi bi-clock-history me-1"></i> Chờ duyệt <span class="badge bg-warning text-dark ms-1">@ViewBag.CountPending</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "APPROVED" ? "active" : "") fw-semibold" href="/Admin/KiemDuyetTin?trangThai=APPROVED">
+                    <i class="bi bi-check-circle me-1"></i> Đã duyệt <span class="badge bg-success ms-1">@ViewBag.CountApproved</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "REJECTED" ? "active" : "") fw-semibold" href="/Admin/KiemDuyetTin?trangThai=REJECTED">
+                    <i class="bi bi-x-circle me-1"></i> Bị từ chối <span class="badge bg-danger ms-1">@ViewBag.CountRejected</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentStatus == "ALL" ? "active" : "") fw-semibold" href="/Admin/KiemDuyetTin?trangThai=ALL">Tất cả tin</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Mã tin</th>
+                        <th>Tiêu đề tin đăng</th>
+                        <th>Giá rao</th>
+                        <th>Người đăng</th>
+                        <th>Ngày đăng</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 220px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr id="row-@item.MaTin">
+                                <td><strong>#@item.MaTin</strong></td>
+                                <td>
+                                    <div class="fw-bold text-dark text-truncate" style="max-width: 300px;">@item.TieuDe</div>
+                                    <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>@(item.MaBdsNavigation?.MaPhuongXaNavigation?.TenPhuongXa ?? "N/A")</small>
+                                </td>
+                                <td>
+                                    <span class="text-danger fw-bold">
+                                        @(item.GiaRaoVnd.HasValue ? string.Format("{0:N0} VNĐ", item.GiaRaoVnd.Value) : "Thỏa thuận")
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@(item.MaNguoiDangNavigation?.HoTen ?? "N/A")</div>
+                                    <small class="text-muted">@(item.MaNguoiDangNavigation?.SoDienThoai ?? "---")</small>
+                                </td>
+                                <td><small class="text-muted">@item.NgayDang?.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td>
+                                    @if (item.TrangThai == "APPROVED")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đã duyệt</span>
+                                    }
+                                    else if (item.TrangThai == "REJECTED")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="@item.LyDoTuChoi">Từ chối</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chờ duyệt</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-info me-1" onclick="viewDetail(@item.MaTin)">
+                                        <i class="bi bi-eye"></i> Xem
+                                    </button>
+                                    @if (item.TrangThai == "PENDING" || item.TrangThai == "REJECTED")
+                                    {
+                                        <button class="btn btn-sm btn-success me-1" onclick="approveTin(@item.MaTin)">
+                                            <i class="bi bi-check-lg"></i> Duyệt
+                                        </button>
+                                    }
+                                    @if (item.TrangThai == "PENDING")
+                                    {
+                                        <button class="btn btn-sm btn-outline-warning me-1" onclick="openRejectModal(@item.MaTin)">
+                                            <i class="bi bi-x-lg"></i> Từ chối
+                                        </button>
+                                    }
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTin(@item.MaTin)">
+                                        <i class="bi bi-trash"></i> Xóa
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Không có tin đăng nào ở trạng thái này.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Chi Tiết Tin Đăng -->
+<!-- Modal Popup Xem Chi Tiết Tin Đăng -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="bi bi-info-circle text-primary me-2"></i>Chi tiết Tin đăng <span id="detailMaTin" class="text-primary"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Tiêu đề & Trạng thái -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h4 id="detailTieuDe" class="fw-bold text-dark mb-0"></h4>
+                    <span id="detailBadgeTrangThai"></span>
+                </div>
+
+                <!-- Thông số chung -->
+                <div class="row g-2 p-3 bg-light rounded mb-3">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Mức giá rao:</small>
+                        <strong id="detailGiaRao" class="text-danger fs-5"></strong>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Loại giao dịch:</small>
+                        <strong id="detailLoaiGiaoDich" class="text-dark"></strong>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Thời điểm đăng:</small>
+                        <span id="detailNgayDang" class="fw-semibold text-dark"></span>
+                    </div>
+                </div>
+
+                <!-- Thông tin Người đăng -->
+                <div class="mb-3">
+                    <h6 class="fw-bold text-primary border-bottom pb-2"><i class="bi bi-person-badge me-2"></i>Thông tin Người đăng</h6>
+                    <div class="row g-2 text-dark">
+                        <div class="col-md-4"><strong>Họ tên:</strong> <span id="detailNguoiDangTen"></span></div>
+                        <div class="col-md-4"><strong>SĐT:</strong> <span id="detailNguoiDangSdt"></span></div>
+                        <div class="col-md-4"><strong>Email:</strong> <span id="detailNguoiDangEmail"></span></div>
+                    </div>
+                </div>
+
+                <!-- Thông tin Bất động sản -->
+                <div class="mb-3">
+                    <h6 class="fw-bold text-primary border-bottom pb-2"><i class="bi bi-geo-alt me-2"></i>Thông tin Bất động sản</h6>
+                    <p class="mb-2"><strong>Địa chỉ:</strong> <span id="detailDiaChi"></span></p>
+                    <div class="row g-2 mb-2 text-dark">
+                        <div class="col-md-3"><strong>Diện tích đất:</strong> <span id="detailDienTichDat"></span> m²</div>
+                        <div class="col-md-3"><strong>DT sử dụng:</strong> <span id="detailDienTichSuDung"></span> m²</div>
+                        <div class="col-md-3"><strong>Hướng:</strong> <span id="detailHuong"></span></div>
+                        <div class="col-md-3"><strong>Pháp lý:</strong> <span id="detailPhapLy"></span></div>
+                    </div>
+                    <div id="boxChiTietNha" class="row g-2 bg-body-tertiary p-2 rounded mb-2 d-none text-dark">
+                        <div class="col-md-3"><strong>Số tầng:</strong> <span id="detailSoTang"></span></div>
+                        <div class="col-md-3"><strong>Phòng ngủ:</strong> <span id="detailSoPhongNgu"></span></div>
+                        <div class="col-md-3"><strong>Phòng WC:</strong> <span id="detailSoWc"></span></div>
+                        <div class="col-md-3"><strong>Nội thất:</strong> <span id="detailNoiThat"></span></div>
+                    </div>
+                </div>
+
+                <!-- Nội dung mô tả -->
+                <div class="mb-3">
+                    <h6 class="fw-bold text-primary border-bottom pb-2"><i class="bi bi-file-text me-2"></i>Nội dung mô tả chi tiết</h6>
+                    <div id="detailMoTa" class="p-3 bg-light rounded text-dark" style="white-space: pre-line;"></div>
+                </div>
+
+                <!-- Lý do từ chối (nếu có) -->
+                <div id="rejectReasonBox" class="alert alert-danger d-none mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Lý do từ chối:</strong> <span id="detailLyDoTuChoi"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Modal Nhập Lý Do Từ Chối -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger">Từ chối Tin đăng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <input type="hidden" id="rejectMaTin" value="0" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do từ chối <span class="text-danger">*</span></label>
+                    <textarea id="rejectLyDo" class="form-control" rows="4" placeholder="Nhập lý do chi tiết (ví dụ: Tin trùng lặp, Giá không hợp lý, Thông tin ảo...)" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger px-4" onclick="confirmReject()">Xác nhận từ chối</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+        // Hàm gán văn bản an toàn không lo sập JS khi thiếu ID
+        function setTxt(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = (value !== null && value !== undefined && value !== '') ? value : '---';
+        }
+
+        // Hàm AJAX lấy thông tin chi tiết
+        async function viewDetail(id) {
+            try {
+                const res = await fetch(`/Admin/KiemDuyetTin/GetDetail/${id}`);
+                const result = await res.json();
+
+                if (result.success) {
+                    const d = result.data;
+
+                    setTxt('detailMaTin', `#${d.maTin}`);
+                    setTxt('detailTieuDe', d.tieuDe);
+                    setTxt('detailGiaRao', d.giaRaoVnd ? d.giaRaoVnd.toLocaleString('vi-VN') + ' VNĐ' : 'Thỏa thuận');
+                    setTxt('detailLoaiGiaoDich', d.loaiGiaoDich === 'BAN' ? 'Rao bán' : 'Cho thuê');
+                    setTxt('detailNgayDang', d.ngayDang);
+                    setTxt('detailMoTa', d.moTa);
+
+                    // Badge trạng thái
+                    const badgeElem = document.getElementById('detailBadgeTrangThai');
+                    if (badgeElem) {
+                        if (d.trangThai === 'APPROVED') {
+                            badgeElem.innerHTML = '<span class="badge bg-success fs-6">Đã duyệt</span>';
+                        } else if (d.trangThai === 'REJECTED') {
+                            badgeElem.innerHTML = '<span class="badge bg-danger fs-6">Bị từ chối</span>';
+                        } else {
+                            badgeElem.innerHTML = '<span class="badge bg-warning text-dark fs-6">Chờ duyệt</span>';
+                        }
+                    }
+
+                    // Người đăng
+                    setTxt('detailNguoiDangTen', d.nguoiDang?.hoTen);
+                    setTxt('detailNguoiDangSdt', d.nguoiDang?.soDienThoai);
+                    setTxt('detailNguoiDangEmail', d.nguoiDang?.email);
+
+                    // Bất động sản
+                    if (d.bds) {
+                        const fullAddress = [d.bds.diaChiMoTa, d.bds.tenPhuongXa, d.bds.tenQuanHuyen].filter(Boolean).join(', ');
+                        setTxt('detailDiaChi', fullAddress || 'Chưa cập nhật');
+                        setTxt('detailDienTichDat', d.bds.dienTichDat);
+                        setTxt('detailDienTichSuDung', d.bds.dienTichSuDung);
+                        setTxt('detailHuong', d.bds.huong);
+                        setTxt('detailPhapLy', d.bds.phapLy);
+
+                        const boxNha = document.getElementById('boxChiTietNha');
+                        if (boxNha) {
+                            if (d.bds.soTang > 0 || d.bds.soPhongNgu > 0) {
+                                boxNha.classList.remove('d-none');
+                                setTxt('detailSoTang', d.bds.soTang);
+                                setTxt('detailSoPhongNgu', d.bds.soPhongNgu);
+                                setTxt('detailSoWc', d.bds.soWc);
+                                setTxt('detailNoiThat', d.bds.noiThat);
+                            } else {
+                                boxNha.classList.add('d-none');
+                            }
+                        }
+                    }
+
+                    // Lý do từ chối
+                    const rejectBox = document.getElementById('rejectReasonBox');
+                    if (rejectBox) {
+                        if (d.trangThai === 'REJECTED' && d.lyDoTuChoi) {
+                            setTxt('detailLyDoTuChoi', d.lyDoTuChoi);
+                            rejectBox.classList.remove('d-none');
+                        } else {
+                            rejectBox.classList.add('d-none');
+                        }
+                    }
+
+                    // Hiển thị Popup Modal
+                    detailModal.show();
+                } else {
+                    alert(result.message);
+                }
+            } catch (e) {
+                console.error("Lỗi JS viewDetail:", e);
+                alert('Có lỗi xảy ra khi tải dữ liệu! Hãy kiểm tra lại Console (F12).');
+            }
+        }
+
+        // 1. Duyệt tin đăng qua AJAX
+        async function approveTin(id) {
+            if (!confirm(`Bạn có chắc chắn muốn DUYỆT tin đăng #${id}?`)) return;
+
+            try {
+                const res = await fetch(`/Admin/KiemDuyetTin/Approve/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    location.reload();
+                }
+            } catch (e) {
+                console.error("Lỗi approveTin:", e);
+                alert("Có lỗi kết nối hệ thống khi duyệt tin!");
+            }
+        }
+
+        // 2. Mở Modal từ chối
+        const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+        function openRejectModal(id) {
+            document.getElementById('rejectMaTin').value = id;
+            document.getElementById('rejectLyDo').value = '';
+            rejectModal.show();
+        }
+
+        // 3. Xác nhận từ chối tin kèm lý do
+        async function confirmReject() {
+            const id = parseInt(document.getElementById('rejectMaTin').value);
+            const lyDo = document.getElementById('rejectLyDo').value.trim();
+
+            if (!lyDo) {
+                alert('Vui lòng nhập lý do từ chối!');
+                document.getElementById('rejectLyDo').focus();
+                return;
+            }
+
+            try {
+                const res = await fetch('/Admin/KiemDuyetTin/Reject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, lyDo: lyDo })
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    rejectModal.hide();
+                    location.reload();
+                }
+            } catch (e) {
+                console.error("Lỗi confirmReject:", e);
+                alert("Có lỗi kết nối hệ thống khi từ chối tin!");
+            }
+        }
+
+        // 4. Xóa vĩnh viễn bài đăng
+        async function deleteTin(id) {
+            if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN tin đăng #${id}?\nHành động này không thể hoàn tác!`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/Admin/KiemDuyetTin/Delete/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    location.reload();
+                }
+            } catch (e) {
+                console.error("Lỗi deleteTin:", e);
+                alert("Có lỗi kết nối khi thực hiện xóa tin đăng!");
+            }
+        }
+    </script>
+}

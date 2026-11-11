@@ -1,0 +1,235 @@
+@model NhaTot.Web.Models.DangTinViewModel
+@{
+    ViewData["Title"] = "Đăng tin Bất động sản mới";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="m-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Đăng tin Bất động sản mới</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="DangTin" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <!-- 1. Thông tin chung -->
+                        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-info-circle me-1"></i> Thông tin cơ bản</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label asp-for="TieuDe" class="form-label fw-bold">Tiêu đề tin đăng <span class="text-danger">*</span></label>
+                                <input asp-for="TieuDe" class="form-control" placeholder="Ví dụ: Bán nhà 3 tầng mặt đường Nguyễn Văn Cừ, TP Vinh" />
+                                <span asp-validation-for="TieuDe" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="MaLoaiBds" class="form-label fw-bold">Loại BĐS <span class="text-danger">*</span></label>
+                                <select asp-for="MaLoaiBds" class="form-select">
+                                    <option value="">-- Chọn loại BĐS --</option>
+                                    @if (ViewBag.DanhSachLoaiBds != null)
+                                    {
+                                        foreach (var loai in ViewBag.DanhSachLoaiBds)
+                                        {
+                                            <option value="@loai.MaLoaiBds">@loai.TenLoaiBds</option>
+                                        }
+                                    }
+                                </select>
+                                <span asp-validation-for="MaLoaiBds" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="GiaRaoVnd" class="form-label fw-bold">Giá rao bán (VNĐ) <span class="text-danger">*</span></label>
+                                <input asp-for="GiaRaoVnd" type="number" class="form-control" placeholder="Ví dụ: 2500000000" />
+                                <span asp-validation-for="GiaRaoVnd" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="MoTa" class="form-label fw-bold">Mô tả chi tiết <span class="text-danger">*</span></label>
+                                <textarea asp-for="MoTa" class="form-control" rows="5" placeholder="Mô tả chi tiết về vị trí, tiện ích xung quanh, pháp lý..."></textarea>
+                                <span asp-validation-for="MoTa" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- 2. Vị trí & Diện tích -->
+                        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-geo-alt me-1"></i> Vị trí & Diện tích</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                                <select id="ddlTinhThanh" name="MaTinh" class="form-select" required>
+                                    <option value="">-- Chọn Tỉnh/Thành --</option>
+                                    @if (ViewBag.DanhSachTinhThanh != null)
+                                    {
+                                        foreach (var t in ViewBag.DanhSachTinhThanh)
+                                        {
+                                            <option value="@t.MaTinh" selected="@(Model.MaTinh == t.MaTinh)">@t.TenTinh</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="MaPhuongXa" class="form-label fw-bold">Phường / Xã <span class="text-danger">*</span></label>
+                                <select asp-for="MaPhuongXa" id="ddlPhuongXa" class="form-select" required>
+                                    <option value="">-- Chọn Phường/Xã --</option>
+                                </select>
+                                <span asp-validation-for="MaPhuongXa" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="DienTichDatM2" class="form-label fw-bold">Diện tích (m²) <span class="text-danger">*</span></label>
+                                <input asp-for="DienTichDatM2" step="0.1" type="number" class="form-control" placeholder="Ví dụ: 100" />
+                                <span asp-validation-for="DienTichDatM2" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="DiaChiMoTa" class="form-label fw-bold">Địa chỉ chi tiết (Số nhà, tên đường)</label>
+                                <input asp-for="DiaChiMoTa" class="form-control" placeholder="Ví dụ: Số 12, Ngõ 45, Đường Lê Duẩn" />
+                            </div>
+                        </div>
+
+                        <!-- 3. Đặc tính Nhà & Đất -->
+                        <div id="sectionDacTinhNha">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-house-door me-1"></i> Chi tiết đặc tính nhà ở (Không áp dụng cho Đất nền)</h5>
+                            <div class="row g-3 mb-4 p-3 bg-light rounded-3 border" id="containerDacTinhNha">
+                                <div class="col-md-3">
+                                    <label asp-for="SoTang" class="form-label">Số tầng</label>
+                                    <input asp-for="SoTang" type="number" class="form-control" min="0" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label asp-for="SoPhongNgu" class="form-label">Số phòng ngủ</label>
+                                    <input asp-for="SoPhongNgu" type="number" class="form-control" min="0" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label asp-for="SoWc" class="form-label">Số WC/Phòng tắm</label>
+                                    <input asp-for="SoWc" type="number" class="form-control" min="0" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label asp-for="DoRongDuongM" class="form-label">Độ rộng đường (m)</label>
+                                    <input asp-for="DoRongDuongM" step="0.1" type="number" class="form-control" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="TinhTrangNha" class="form-label">Tình trạng nhà</label>
+                                    <input asp-for="TinhTrangNha" class="form-control" placeholder="Mới xây, Đã qua sử dụng..." />
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="NoiThat" class="form-label">Tình trạng nội thất</label>
+                                    <input asp-for="NoiThat" class="form-control" placeholder="Đầy đủ, Cơ bản, Bàn giao thô..." />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Hình ảnh bất động sản -->
+                        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-images me-1"></i> Hình ảnh bất động sản</h5>
+                        <div class="mb-4">
+                            <input asp-for="HinhAnhFiles" type="file" multiple class="form-control" accept="image/*" onchange="previewImages(event)" />
+                            <div id="previewContainer" class="d-flex gap-2 mt-3 flex-wrap"></div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="/" class="btn btn-secondary px-4">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-success px-5 fw-bold">
+                                <i class="bi bi-cloud-upload me-1"></i> Đăng tin ngay
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Xử lý bật/tắt làm xám đặc tính nhà khi chọn Đất nền
+        const ddlLoaiBds = document.getElementById('MaLoaiBds');
+        const containerDacTinh = document.getElementById('containerDacTinhNha');
+        const inputsDacTinh = containerDacTinh.querySelectorAll('input');
+
+        function updateDacTinhState() {
+            const selectedText = ddlLoaiBds.options[ddlLoaiBds.selectedIndex]?.text?.toLowerCase() || '';
+            const isDatNen = selectedText.includes('đất') || selectedText.includes('dat');
+
+            if (isDatNen) {
+                containerDacTinh.classList.add('opacity-50');
+                containerDacTinh.style.pointerEvents = 'none';
+                inputsDacTinh.forEach(inp => {
+                    inp.value = '';
+                    inp.disabled = true;
+                });
+            } else {
+                containerDacTinh.classList.remove('opacity-50');
+                containerDacTinh.style.pointerEvents = 'auto';
+                inputsDacTinh.forEach(inp => {
+                    inp.disabled = false;
+                });
+            }
+        }
+
+        if (ddlLoaiBds) {
+            ddlLoaiBds.addEventListener('change', updateDacTinhState);
+            updateDacTinhState();
+        }
+
+        // Xử lý nạp Phường/Xã trực tiếp theo Tỉnh/Thành
+        async function loadPhuongXa(maTinh, selectedId) {
+            const ddl = document.getElementById('ddlPhuongXa');
+            ddl.innerHTML = '<option value="">-- Đang tải... --</option>';
+            if (!maTinh) {
+                ddl.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/Home/GetPhuongXa?maTinh=${maTinh}`);
+                const data = await res.json();
+                ddl.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.maPhuongXa;
+                    opt.textContent = p.tenPhuongXa;
+                    if (selectedId && selectedId == p.maPhuongXa) opt.selected = true;
+                    ddl.appendChild(opt);
+                });
+            } catch (e) {
+                ddl.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            }
+        }
+
+        const ddlTinh = document.getElementById('ddlTinhThanh');
+
+        if (ddlTinh) {
+            ddlTinh.addEventListener('change', function () {
+                loadPhuongXa(this.value);
+            });
+            if (ddlTinh.value) {
+                loadPhuongXa(ddlTinh.value, '@Model.MaPhuongXa');
+            }
+        }
+
+        function previewImages(event) {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+            const files = event.target.files;
+
+            if (files) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-thumbnail rounded';
+                        img.style.width = '120px';
+                        img.style.height = '90px';
+                        img.style.objectFit = 'cover';
+                        container.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+    </script>
+}

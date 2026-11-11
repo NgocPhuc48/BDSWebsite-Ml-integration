@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin NhaTot</title>
+
+    <!-- Bootstrap 5 CSS & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <style>
+        :root {
+            --sidebar-width: 260px;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+        }
+        .admin-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #1e293b;
+            color: #94a3b8;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar .brand {
+            padding: 1.25rem 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+            text-decoration: none;
+        }
+        .sidebar-menu {
+            padding: 0.8rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .sidebar-category {
+            font-size: 0.725rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 700;
+            margin: 1.2rem 0.5rem 0.4rem 0.5rem;
+        }
+        .nav-link-custom {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 0.8rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+        }
+        .nav-link-custom i {
+            font-size: 1.1rem;
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+        .nav-link-custom:hover {
+            background-color: #334155;
+            color: #fff;
+        }
+        .nav-link-custom.active {
+            background-color: #0284c7;
+            color: #fff;
+            font-weight: 600;
+        }
+        /* Main Content Styling */
+        .main-content {
+            flex-grow: 1;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+        }
+        .top-navbar {
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.8rem 1.8rem;
+        }
+        .content-body {
+            padding: 1.8rem;
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="brand d-flex align-items-center">
+                <i class="bi bi-building-fill-gear text-info me-2"></i> NhaTot Admin
+            </a>
+
+            <div class="sidebar-menu">
+                @{
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+                }
+                <!-- 1. TỔNG QUAN -->
+                <div class="sidebar-category">Tổng quan</div>
+                <a href="/Admin/Dashboard" class="nav-link-custom @(currentController == "Dashboard" ? "active" : "")">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+
+                <!-- 2. DANH MỤC & ĐỊA CHÍNH -->
+                <div class="sidebar-category">Danh mục & Địa chính</div>
+                <a href="/Admin/LoaiBds" class="nav-link-custom @(currentController == "LoaiBds" ? "active" : "")">
+                    <i class="bi bi-tags-fill"></i> Loại Bất động sản
+                </a>
+                <a href="/Admin/DiaChinh" class="nav-link-custom @(currentController == "DiaChinh" || currentController == "TinhThanh" || currentController == "QuanHuyen" || currentController == "PhuongXa" ? "active" : "")">
+                    <i class="bi bi-geo-alt-fill"></i> Quản lý Địa chính
+                </a>
+
+                <!-- 3. TIN ĐĂNG & QUẢN TRỊ BĐS -->
+                <div class="sidebar-category">Tin đăng & Rao bán</div>
+                <a href="/Admin/KiemDuyetTin" class="nav-link-custom @(currentController == "KiemDuyetTin" ? "active" : "")">
+                    <i class="bi bi-shield-check"></i> Kiểm duyệt Tin đăng
+                </a>
+                <a href="/Admin/BaoCaoTinDang" class="nav-link-custom @(currentController == "BaoCaoTinDang" ? "active" : "")">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Xử lý Báo cáo rác
+                </a>
+
+                <!-- 4. TÀI KHỎAN & VÍ ĐIỂM -->
+                <div class="sidebar-category">Tài khoản & Ví điểm</div>
+                <a href="/Admin/NguoiDung" class="nav-link-custom @(currentController == "NguoiDung" ? "active" : "")">
+                    <i class="bi bi-people-fill"></i> Quản lý Người dùng
+                </a>
+                <a href="/Admin/QuanLyVi" class="nav-link-custom @(currentController == "QuanLyVi" ? "active" : "")">
+                    <i class="bi bi-wallet2"></i> Ví điểm & Giao dịch
+                </a>
+
+                <!-- 5. TƯ VẤN & BẪY GIÁ MỤC TIÊU -->
+                <div class="sidebar-category">Tư vấn hỗ trợ</div>
+                <a href="/Admin/PhanCongTuVan" class="nav-link-custom @(currentController == "PhanCongTuVan" ? "active" : "")">
+                    <i class="bi bi-headset"></i> Phân công tư vấn
+                </a>
+
+                <!-- 6. AI ENGINE & CÀO LEAD MXH -->
+                <div class="sidebar-category">AI Engine & Social Bot</div>
+                <a href="/Admin/MlOps" class="nav-link-custom @(currentController == "MlOps" ? "active" : "")">
+                    <i class="bi bi-cpu-fill"></i> MLOps & Mô hình AI
+                </a>
+                <a href="/Admin/SocialBot" class="nav-link-custom @(currentController == "SocialBot" ? "active" : "")">
+                    <i class="bi bi-robot"></i> Social Bot & Cào dữ liệu
+                </a>
+            </div>
+
+            <!-- Footer Sidebar -->
+            <div class="p-3 border-top border-secondary">
+                <a href="/" class="btn btn-outline-light btn-sm w-100 d-flex align-items-center justify-content-center">
+                    <i class="bi bi-box-arrow-left me-2"></i> Về trang khách
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="top-navbar d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fs-6 fw-bold text-dark">PropTech Nghệ An - Hệ thống Quản trị NhaTot</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-6">
+                        <i class="bi bi-person-circle me-1"></i> Quản trị viên
+                    </span>
+                </div>
+            </header>
+
+            <!-- Dynamic Body -->
+            <div class="content-body">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

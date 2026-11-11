@@ -1,0 +1,264 @@
+@model IEnumerable<NhaTot.Domain.Entities.NguonDuLieu>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Nguồn Cào Social Lead Bot";
+}
+
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-robot text-primary me-2"></i>Social Lead Bot - Nguồn Cào Dữ Liệu</h3>
+        <p class="text-muted mb-0">Quản lý cấu hình Bot cào tự động từ Facebook Group, Zalo và website BĐS</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Admin/SocialBot/NhatKyXuLy" class="btn btn-outline-info shadow-sm">
+            <i class="bi bi-journal-code me-1"></i> Nhật ký Bóc tách ETL/NLP
+        </a>
+        <button type="button" class="btn btn-primary shadow-sm" onclick="openCreateModal()">
+            <i class="bi bi-plus-circle me-1"></i> Thêm Nguồn Cào Mới
+        </button>
+    </div>
+</div>
+
+<!-- Stats Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm bg-primary text-white h-100">
+            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-white-50 small fw-bold text-uppercase">Tổng số nguồn cào</div>
+                    <h3 class="fw-bold my-1">@ViewBag.TongSoNguon</h3>
+                    <small class="text-white-50">Kênh quét dữ liệu</small>
+                </div>
+                <div class="fs-1 opacity-50"><i class="bi bi-diagram-3"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm bg-success text-white h-100">
+            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-white-50 small fw-bold text-uppercase">Bot đang hoạt động</div>
+                    <h3 class="fw-bold my-1">@ViewBag.SoNguonHoatDong</h3>
+                    <small class="text-white-50">Tự động quét định kỳ</small>
+                </div>
+                <div class="fs-1 opacity-50"><i class="bi bi-cpu-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm bg-dark text-white h-100">
+            <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-white-50 small fw-bold text-uppercase">Tổng số bài cào thô</div>
+                    <h3 class="fw-bold my-1">@string.Format("{0:N0}", ViewBag.TongSoBaiCao)</h3>
+                    <small class="text-white-50">Bài viết đã thu thập</small>
+                </div>
+                <div class="fs-1 opacity-50"><i class="bi bi-database-check"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Mã</th>
+                        <th>Tên Nguồn cào</th>
+                        <th>Địa chỉ URL / Group</th>
+                        <th>Phạm vi áp dụng</th>
+                        <th>Số bài đã cào</th>
+                        <th>Trạng thái Bot</th>
+                        <th class="text-end" style="width: 220px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr id="row-@item.MaNguon">
+                                <td><strong>#@item.MaNguon</strong></td>
+                                <td><span class="fw-bold text-dark">@item.TenNguon</span></td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.DiaChiWebsite))
+                                    {
+                                        <a href="@item.DiaChiWebsite" target="_blank" class="text-truncate d-inline-block text-primary text-decoration-none" style="max-width: 240px;">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>@item.DiaChiWebsite
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">---</span>
+                                    }
+                                </td>
+                                <td><span class="badge bg-secondary-subtle text-secondary border">@(item.PhamViSuDung ?? "Toàn quốc")</span></td>
+                                <td><span class="fw-bold text-primary">@item.DuLieuThuThaps.Count</span> bài</td>
+                                <td>
+                                    @if (item.TrangThai == "ACTIVE")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-play-circle-fill me-1"></i>Đang chạy
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            <i class="bi bi-pause-circle-fill me-1"></i>Tạm dừng
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditModal(@item.MaNguon)">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-sm @(item.TrangThai == "ACTIVE" ? "btn-outline-danger" : "btn-outline-success") me-1" onclick="toggleSource(@item.MaNguon)">
+                                        <i class="bi @(item.TrangThai == "ACTIVE" ? "bi-pause-fill" : "bi-play-fill")"></i> @(item.TrangThai == "ACTIVE" ? "Tắt" : "Bật")
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="confirmDelete(@item.MaNguon, '@item.TenNguon')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Chưa có nguồn cào dữ liệu nào được cấu hình.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Popup Thêm/Sửa Nguồn Cào -->
+<div class="modal fade" id="sourceModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="sourceModalTitle">Nguồn cào Dữ liệu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <input type="hidden" id="MaNguon" value="0" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên Nguồn cào <span class="text-danger">*</span></label>
+                    <input type="text" id="TenNguon" class="form-control" placeholder="Ví dụ: Group Facebook BĐS TP Vinh" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">URL Website / Facebook Group</label>
+                    <input type="text" id="DiaChiWebsite" class="form-control" placeholder="https://facebook.com/groups/..." />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phạm vi thu thập</label>
+                    <input type="text" id="PhamViSuDung" class="form-control" placeholder="Ví dụ: TP. Vinh, Cửa Lò, Nghi Lộc..." />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ghi chú / Giấy phép API</label>
+                    <textarea id="GhiChuGiayPhep" class="form-control" rows="2" placeholder="Cấu hình Token hoặc ghi chú ghi nhận nguồn..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary px-4" onclick="saveSource()">
+                    <i class="bi bi-save me-1"></i> Lưu cấu hình
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const sourceModal = new bootstrap.Modal(document.getElementById('sourceModal'));
+
+        function openCreateModal() {
+            document.getElementById('sourceModalTitle').innerText = 'Thêm Nguồn cào Dữ liệu Mới';
+            document.getElementById('MaNguon').value = 0;
+            document.getElementById('TenNguon').value = '';
+            document.getElementById('DiaChiWebsite').value = '';
+            document.getElementById('PhamViSuDung').value = '';
+            document.getElementById('GhiChuGiayPhep').value = '';
+            sourceModal.show();
+        }
+
+        async function openEditModal(id) {
+            try {
+                const res = await fetch(`/Admin/SocialBot/GetSourceById/${id}`);
+                const result = await res.json();
+                if (result.success) {
+                    const data = result.data;
+                    document.getElementById('sourceModalTitle').innerText = 'Chỉnh sửa Nguồn cào Dữ liệu';
+                    document.getElementById('MaNguon').value = data.maNguon;
+                    document.getElementById('TenNguon').value = data.tenNguon || '';
+                    document.getElementById('DiaChiWebsite').value = data.diaChiWebsite || '';
+                    document.getElementById('PhamViSuDung').value = data.phamViSuDung || '';
+                    document.getElementById('GhiChuGiayPhep').value = data.ghiChuGiayPhep || '';
+                    sourceModal.show();
+                } else { alert(result.message); }
+            } catch (e) { alert('Không thể tải dữ liệu!'); }
+        }
+
+        async function toggleSource(id) {
+            try {
+                const res = await fetch(`/Admin/SocialBot/ToggleSource/${id}`, { method: 'POST' });
+                const result = await res.json();
+                if (result.success) {
+                    location.reload();
+                } else { alert(result.message); }
+            } catch (e) { alert('Lỗi kết nối máy chủ!'); }
+        }
+
+        async function saveSource() {
+            const payload = {
+                MaNguon: parseInt(document.getElementById('MaNguon').value),
+                TenNguon: document.getElementById('TenNguon').value.trim(),
+                DiaChiWebsite: document.getElementById('DiaChiWebsite').value.trim(),
+                PhamViSuDung: document.getElementById('PhamViSuDung').value.trim(),
+                GhiChuGiayPhep: document.getElementById('GhiChuGiayPhep').value.trim()
+            };
+
+            if (!payload.TenNguon) {
+                alert('Vui lòng nhập tên nguồn cào!');
+                return;
+            }
+
+            try {
+                const res = await fetch('/Admin/SocialBot/SaveSource', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    sourceModal.hide();
+                    location.reload();
+                } else { alert(result.message); }
+            } catch (e) { alert('Lỗi khi lưu dữ liệu!'); }
+        }
+
+        async function confirmDelete(id, name) {
+            if (confirm(`Bạn có chắc chắn muốn xóa nguồn cào "${name}"?`)) {
+                try {
+                    const res = await fetch(`/Admin/SocialBot/DeleteSource/${id}`, { method: 'POST' });
+                    const result = await res.json();
+                    if (result.success) {
+                        const row = document.getElementById(`row-${id}`);
+                        if (row) row.remove();
+                    } else { alert(result.message); }
+                } catch (e) { alert('Lỗi khi thực hiện xóa!'); }
+            }
+        }
+    </script>
+}

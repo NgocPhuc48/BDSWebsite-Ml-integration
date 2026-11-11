@@ -1,0 +1,124 @@
+@model NhaTot.Web.Models.DinhGiaInputModel
+@{
+    ViewData["Title"] = "Công cụ Định giá Bất động sản bằng AI";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="m-0 fw-bold"><i class="bi bi-cpu-fill me-2"></i>Định giá Bất động sản AI</h4>
+                </div>
+                <div class="card-body">
+                    <form id="formDinhGia">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">Loại BĐS</label>
+                                <select id="MaLoaiBds" class="form-select" required>
+                                    <option value="">-- Chọn loại BĐS --</option>
+                                    @foreach (var loai in ViewBag.DanhSachLoaiBds)
+                                    {
+                                        <option value="@loai.MaLoaiBds">@loai.TenLoaiBds</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">Phường/Xã</label>
+                                <input type="number" id="MaPhuongXa" class="form-control" placeholder="Mã Phường/Xã (ví dụ: 101)" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">Diện tích đất (m²)</label>
+                                <input type="number" step="0.1" id="DienTichDat" class="form-control" placeholder="Ví dụ: 85.5" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">Độ rộng đường/hẻm (m)</label>
+                                <input type="number" step="0.1" id="RongDuongMeters" class="form-control" placeholder="Ví dụ: 5.5" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Số tầng</label>
+                                <input type="number" id="SoTang" class="form-control" value="1" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Số phòng ngủ</label>
+                                <input type="number" id="SoPhongNgu" class="form-control" value="2" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Hướng nhà</label>
+                                <select id="Huong" class="form-select">
+                                    <option value="Dong">Đông</option>
+                                    <option value="Tay">Tây</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Bac">Bắc</option>
+                                    <option value="Dong Nam" selected>Đông Nam</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="thucHienDinhGia()" class="btn btn-success w-100 mt-4 py-2 fw-bold">
+                            <i class="bi bi-calculator me-1"></i> Tính giá trị AI
+                        </button>
+                    </form>
+
+                    <!-- Kết quả hiển thị -->
+                    <div id="ketQuaBox" class="mt-4 p-4 border rounded bg-light d-none">
+                        <h5 class="text-primary fw-bold mb-3">Kết quả phân tích từ AI:</h5>
+                        <div class="row text-center">
+                            <div class="col-md-12 mb-3">
+                                <small class="text-muted d-block">Giá trị định giá dự báo</small>
+                                <h2 id="txtGiaDuBoan" class="text-danger fw-bold m-0">0 VNĐ</h2>
+                            </div>
+                            <div class="col-md-6 border-end">
+                                <small class="text-muted">Đơn giá ước tính / m²</small>
+                                <h5 id="txtDonGiaM2" class="fw-bold text-dark">0 VNĐ/m²</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">Độ tin cậy mô hình</small>
+                                <h5 id="txtDoTinCai" class="fw-bold text-success">0%</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function thucHienDinhGia() {
+            const payload = {
+                maLoaiBds: parseInt(document.getElementById('MaLoaiBds').value) || 0,
+                maPhuongXa: parseInt(document.getElementById('MaPhuongXa').value) || 0,
+                dienTichDat: parseFloat(document.getElementById('DienTichDat').value) || 0,
+                rongDuongMeters: parseFloat(document.getElementById('RongDuongMeters').value) || null,
+                soTang: parseInt(document.getElementById('SoTang').value) || 1,
+                soPhongNgu: parseInt(document.getElementById('SoPhongNgu').value) || 1,
+                huong: document.getElementById('Huong').value
+            };
+
+            const res = await fetch('/DinhGia/TinhGia', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message);
+                return;
+            }
+
+            document.getElementById('ketQuaBox').classList.remove('d-none');
+            document.getElementById('txtGiaDuBoan').innerText = data.giaDuBoanVnd.toLocaleString('vi-VN') + ' VNĐ';
+            document.getElementById('txtDonGiaM2').innerText = data.donGiaTrenM2Vnd.toLocaleString('vi-VN') + ' VNĐ/m²';
+            document.getElementById('txtDoTinCai').innerText = data.doTinCaiPhanTram + '%';
+        }
+    </script>
+}

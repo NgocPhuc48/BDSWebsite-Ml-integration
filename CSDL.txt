@@ -1,0 +1,688 @@
+IF DB_ID(N'NhaTot') IS NULL
+    CREATE DATABASE NhaTot;
+GO
+USE NhaTot;
+GO
+
+-- ==========================================
+-- 1. NHÓM TÀI KHỎAN & VÍ ĐIỂM
+-- ==========================================
+CREATE TABLE dbo.NguoiDung (
+    MaNguoiDung BIGINT IDENTITY(1,1) PRIMARY KEY,
+    HoTen NVARCHAR(150),
+    Email NVARCHAR(254),
+    SoDienThoai VARCHAR(20),
+    HashMatKhau NVARCHAR(255),
+    VaiTro INT, -- 1: User, 2: Broker, 3: Consultant, 4: Admin
+    TrangThai VARCHAR(20),
+    NgayTao DATETIME2,
+    NgayCapNhat DATETIME2
+);
+GO
+
+CREATE TABLE dbo.ViTaiKhoan (
+    MaVi BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    SoDuDiem DECIMAL(18,2),
+    TrangThai VARCHAR(20),
+    NgayTao DATETIME2,
+    NgayCapNhat DATETIME2,
+    CONSTRAINT FK_ViTaiKhoan_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.LichSuGiaoDich (
+    MaGiaoDich BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaVi BIGINT,
+    LoaiGiaoDich VARCHAR(30),
+    SoDiem DECIMAL(18,2),
+    SoDuSauGiaoDich DECIMAL(18,2),
+    MoTa NVARCHAR(500),
+    NgayTao DATETIME2,
+    CONSTRAINT FK_LichSuGiaoDich_ViTaiKhoan FOREIGN KEY (MaVi) REFERENCES dbo.ViTaiKhoan(MaVi)
+);
+GO
+
+-- ==========================================
+-- 2. NHÓM ĐỊA LÝ & BẤT ĐỘNG SẢN
+-- ==========================================
+CREATE TABLE dbo.TinhThanh (
+    MaTinh INT IDENTITY(1,1) PRIMARY KEY,
+    TenTinh NVARCHAR(100),
+    MaHanhChinh VARCHAR(20),
+    TrangThai BIT
+);
+GO
+
+CREATE TABLE dbo.QuanHuyen (
+    MaQuanHuyen INT IDENTITY(1,1) PRIMARY KEY,
+    MaTinh INT,
+    TenQuanHuyen NVARCHAR(120),
+    MaHanhChinh VARCHAR(20),
+    TrangThai BIT,
+    CONSTRAINT FK_QuanHuyen_TinhThanh FOREIGN KEY (MaTinh) REFERENCES dbo.TinhThanh(MaTinh)
+);
+GO
+
+CREATE TABLE dbo.PhuongXa (
+    MaPhuongXa INT IDENTITY(1,1) PRIMARY KEY,
+    MaQuanHuyen INT,
+    TenPhuongXa NVARCHAR(120),
+    MaHanhChinh VARCHAR(20),
+    TrangThai BIT,
+    CONSTRAINT FK_PhuongXa_QuanHuyen FOREIGN KEY (MaQuanHuyen) REFERENCES dbo.QuanHuyen(MaQuanHuyen)
+);
+GO
+
+CREATE TABLE dbo.LoaiBDS (
+    MaLoaiBDS INT IDENTITY(1,1) PRIMARY KEY,
+    TenLoaiBDS NVARCHAR(80),
+    MoTa NVARCHAR(300),
+    TrangThai BIT
+);
+GO
+
+CREATE TABLE dbo.BatDongSan (
+    MaBDS BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaLoaiBDS INT,
+    MaPhuongXa INT,
+    DiaChiMoTa NVARCHAR(300),
+    TenDuAn NVARCHAR(200),
+    DienTichDat DECIMAL(12,2),
+    DienTichSuDung DECIMAL(12,2),
+    Huong VARCHAR(20),
+    PhapLy NVARCHAR(100),
+    ViDo DECIMAL(10,7),
+    KinhDo DECIMAL(10,7),
+    MoTaDacDiem NVARCHAR(MAX),
+    NgayTao DATETIME2,
+    CONSTRAINT FK_BatDongSan_LoaiBDS FOREIGN KEY (MaLoaiBDS) REFERENCES dbo.LoaiBDS(MaLoaiBDS),
+    CONSTRAINT FK_BatDongSan_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa)
+);
+GO
+
+CREATE TABLE dbo.ChiTietDat (
+    MaChiTietDat BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaBDS BIGINT,
+    LoaiDat NVARCHAR(100),
+    MatTienM DECIMAL(8,2),
+    ChieuSauM DECIMAL(8,2),
+    LoaiDuong NVARCHAR(100),
+    DoRongDuongM DECIMAL(8,2),
+    HinhDang NVARCHAR(80),
+    CONSTRAINT FK_ChiTietDat_BatDongSan FOREIGN KEY (MaBDS) REFERENCES dbo.BatDongSan(MaBDS)
+);
+GO
+
+CREATE TABLE dbo.ChiTietNha (
+    MaChiTietNha BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaBDS BIGINT,
+    SoTang INT,
+    SoPhongNgu INT,
+    SoWC INT,
+    NamXayDung INT,
+    TinhTrangNha NVARCHAR(100),
+    NoiThat NVARCHAR(100),
+    CONSTRAINT FK_ChiTietNha_BatDongSan FOREIGN KEY (MaBDS) REFERENCES dbo.BatDongSan(MaBDS)
+);
+GO
+
+-- ==========================================
+-- 3. NHÓM TIN ĐĂNG & RAO BÁN
+-- ==========================================
+CREATE TABLE dbo.TinDang (
+    MaTin BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaBDS BIGINT,
+    MaNguoiDang BIGINT,
+    LoaiGiaoDich VARCHAR(10),
+    TieuDe NVARCHAR(250),
+    MoTa NVARCHAR(MAX),
+    GiaRaoVND DECIMAL(18,2),
+    TienCocVND DECIMAL(18,2),
+    KyHanThanhToanThang INT,
+    ThoiHanHopDongMinThang INT,
+    DanhSachAnhDatDai NVARCHAR(MAX),
+    DanhSachAnhSoDoSoHong NVARCHAR(MAX),
+    TrangThai VARCHAR(20),
+    NgayDang DATETIME2,
+    NgayHetHan DATETIME2,
+    NgayDuyet DATETIME2,
+    MaNguoiDuyet BIGINT,
+    LyDoTuChoi NVARCHAR(500),
+    CONSTRAINT FK_TinDang_BatDongSan FOREIGN KEY (MaBDS) REFERENCES dbo.BatDongSan(MaBDS),
+    CONSTRAINT FK_TinDang_NguoiDang FOREIGN KEY (MaNguoiDang) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_TinDang_NguoiDuyet FOREIGN KEY (MaNguoiDuyet) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.LichSuGiaTin (
+    MaLichSu BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaTin BIGINT,
+    GiaCuVND DECIMAL(18,2),
+    GiaMoiVND DECIMAL(18,2),
+    ThoiDiem DATETIME2,
+    NguoiThayDoi BIGINT,
+    CONSTRAINT FK_LichSuGiaTin_TinDang FOREIGN KEY (MaTin) REFERENCES dbo.TinDang(MaTin),
+    CONSTRAINT FK_LichSuGiaTin_NguoiDung FOREIGN KEY (NguoiThayDoi) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+-- ==========================================
+-- 4. NHÓM TƯ VẤN & BẪY GIÁ MỤC TIÊU
+-- ==========================================
+CREATE TABLE dbo.NhuCauTimKiem (
+    MaNhuCau BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    MaLoaiBDS INT,
+    MaPhuongXa INT,
+    LoaiGiaoDich VARCHAR(10),
+    NganSachMinVND DECIMAL(18,2),
+    NganSachMaxVND DECIMAL(18,2),
+    DienTichMin DECIMAL(12,2),
+    DienTichMax DECIMAL(12,2),
+    MucDich NVARCHAR(100),
+    TieuChiThem NVARCHAR(1000),
+    NgayTao DATETIME2,
+    CONSTRAINT FK_NhuCauTimKiem_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_NhuCauTimKiem_LoaiBDS FOREIGN KEY (MaLoaiBDS) REFERENCES dbo.LoaiBDS(MaLoaiBDS),
+    CONSTRAINT FK_NhuCauTimKiem_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa)
+);
+GO
+
+CREATE TABLE dbo.YeuCauTuVan (
+    MaYeuCau BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiGui BIGINT,
+    MaNhuCau BIGINT,
+    TieuDe NVARCHAR(200),
+    NoiDung NVARCHAR(2000),
+    TrangThai VARCHAR(20),
+    MucDoUuTien INT,
+    NgayTao DATETIME2,
+    NgayDong DATETIME2,
+    CONSTRAINT FK_YeuCauTuVan_NguoiGui FOREIGN KEY (MaNguoiGui) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_YeuCauTuVan_NhuCau FOREIGN KEY (MaNhuCau) REFERENCES dbo.NhuCauTimKiem(MaNhuCau)
+);
+GO
+
+CREATE TABLE dbo.PhanCongTuVan (
+    MaPhanCong BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaYeuCau BIGINT,
+    MaTuVanVien BIGINT,
+    MaNguoiPhanCong BIGINT,
+    NgayPhanCong DATETIME2,
+    GhiChu NVARCHAR(500),
+    CONSTRAINT FK_PhanCongTuVan_YeuCau FOREIGN KEY (MaYeuCau) REFERENCES dbo.YeuCauTuVan(MaYeuCau),
+    CONSTRAINT FK_PhanCongTuVan_TuVanVien FOREIGN KEY (MaTuVanVien) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_PhanCongTuVan_NguoiPhanCong FOREIGN KEY (MaNguoiPhanCong) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.LichHen (
+    MaLichHen BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaYeuCau BIGINT,
+    MaTin BIGINT,
+    MaNguoiTao BIGINT,
+    ThoiGianHen DATETIME2,
+    DiaDiem NVARCHAR(500),
+    TrangThai VARCHAR(20),
+    GhiChu NVARCHAR(1000),
+    CONSTRAINT FK_LichHen_YeuCau FOREIGN KEY (MaYeuCau) REFERENCES dbo.YeuCauTuVan(MaYeuCau),
+    CONSTRAINT FK_LichHen_TinDang FOREIGN KEY (MaTin) REFERENCES dbo.TinDang(MaTin),
+    CONSTRAINT FK_LichHen_NguoiTao FOREIGN KEY (MaNguoiTao) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.YeuThich (
+    MaYeuThich BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    MaTin BIGINT,
+    NgayLuu DATETIME2,
+    CONSTRAINT FK_YeuThich_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_YeuThich_TinDang FOREIGN KEY (MaTin) REFERENCES dbo.TinDang(MaTin)
+);
+GO
+
+CREATE TABLE dbo.MucTieuTheoDoiGia (
+    MaMucTieu BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    MaQuanHuyen INT,
+    MaPhuongXa INT,
+    MaLoaiBDS INT,
+    LoaiGiaoDich VARCHAR(10),
+    GiaMongMuonVND DECIMAL(18,2),
+    TienCocDiem DECIMAL(18,2),
+    TrangThai VARCHAR(20),
+    NgayTao DATETIME2,
+    NgayHetHan DATETIME2,
+    CONSTRAINT FK_MucTieuTheoDoiGia_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_MucTieuTheoDoiGia_QuanHuyen FOREIGN KEY (MaQuanHuyen) REFERENCES dbo.QuanHuyen(MaQuanHuyen),
+    CONSTRAINT FK_MucTieuTheoDoiGia_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa),
+    CONSTRAINT FK_MucTieuTheoDoiGia_LoaiBDS FOREIGN KEY (MaLoaiBDS) REFERENCES dbo.LoaiBDS(MaLoaiBDS)
+);
+GO
+
+-- ==========================================
+-- 5. NHÓM HỌC MÁY (AI / MACHINE LEARNING)
+-- ==========================================
+CREATE TABLE dbo.PhienBanMoHinh (
+    MaPhienBan INT IDENTITY(1,1) PRIMARY KEY,
+    TenMoHinh NVARCHAR(100),
+    PhienBan VARCHAR(50),
+    LoaiBDSApDung INT,
+    DuongDanArtifact NVARCHAR(1000),
+    NgayHuanLuyen DATETIME2,
+    SoMauHuanLuyen INT,
+    GhiChu NVARCHAR(1000),
+    TrangThai VARCHAR(20)
+);
+GO
+
+CREATE TABLE dbo.LichSuDinhGia (
+    MaDinhGia BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    MaBDS BIGINT,
+    MaPhienBan INT,
+    MaPhuongXa INT,
+    MaLoaiBDS INT,
+    DienTich DECIMAL(12,2),
+    ChieuRongMatTien DECIMAL(8,2),
+    DuongVaoRong DECIMAL(8,2),
+    Huong VARCHAR(20),
+    PhapLy NVARCHAR(100),
+    ViDo DECIMAL(10,7),
+    KinhDo DECIMAL(10,7),
+    GiaDuDoanVND DECIMAL(18,2),
+    GiaThapNhatVND DECIMAL(18,2),
+    GiaCaoNhatVND DECIMAL(18,2),
+    DoTinCay DECIMAL(5,2),
+    CanhBao NVARCHAR(1000),
+    ThoiGianDinhGia DATETIME2,
+    CONSTRAINT FK_LichSuDinhGia_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_LichSuDinhGia_BatDongSan FOREIGN KEY (MaBDS) REFERENCES dbo.BatDongSan(MaBDS),
+    CONSTRAINT FK_LichSuDinhGia_PhienBan FOREIGN KEY (MaPhienBan) REFERENCES dbo.PhienBanMoHinh(MaPhienBan),
+    CONSTRAINT FK_LichSuDinhGia_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa),
+    CONSTRAINT FK_LichSuDinhGia_LoaiBDS FOREIGN KEY (MaLoaiBDS) REFERENCES dbo.LoaiBDS(MaLoaiBDS)
+);
+GO
+
+CREATE TABLE dbo.KetQuaDanhGiaMoHinh (
+    MaKetQua BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaPhienBan INT,
+    TapDuLieu VARCHAR(20),
+    MAE DECIMAL(19,4),
+    RMSE DECIMAL(19,4),
+    R2 DECIMAL(10,6),
+    SoMau INT,
+    NgayDanhGia DATETIME2,
+    GhiChu NVARCHAR(1000),
+    CONSTRAINT FK_KetQuaDanhGiaMoHinh_PhienBan FOREIGN KEY (MaPhienBan) REFERENCES dbo.PhienBanMoHinh(MaPhienBan)
+);
+GO
+
+-- ==========================================
+-- 6. NHÓM THU THẬP DỮ LIỆU & LEAD MXH
+-- ==========================================
+CREATE TABLE dbo.NguonDuLieu (
+    MaNguon INT IDENTITY(1,1) PRIMARY KEY,
+    TenNguon NVARCHAR(150),
+    DiaChiWebsite NVARCHAR(1000),
+    PhamViSuDung NVARCHAR(500),
+    GhiChuGiayPhep NVARCHAR(1000),
+    TrangThai VARCHAR(20)
+);
+GO
+
+CREATE TABLE dbo.DuLieuThuThap (
+    MaDuLieu BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguon INT,
+    MaTinNguon NVARCHAR(200),
+    URLTin NVARCHAR(1500),
+    TieuDe NVARCHAR(500),
+    LoaiBDSNguon NVARCHAR(150),
+    TinhNguon NVARCHAR(150),
+    PhuongXaNguon NVARCHAR(150),
+    GiaRaoVND DECIMAL(18,2),
+    DienTich DECIMAL(12,2),
+    HashNoiDung CHAR(64),
+    NgayDangNguon DATETIME2,
+    NgayThuThap DATETIME2,
+    TrangThaiXuLy VARCHAR(20),
+    CONSTRAINT FK_DuLieuThuThap_NguonDuLieu FOREIGN KEY (MaNguon) REFERENCES dbo.NguonDuLieu(MaNguon)
+);
+GO
+
+CREATE TABLE dbo.LichSuXuLyDuLieu (
+    MaXuLy BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaDuLieu BIGINT,
+    BuocXuLy NVARCHAR(100),
+    KetQua VARCHAR(20),
+    ChiTiet NVARCHAR(1000),
+    ThoiDiem DATETIME2,
+    CONSTRAINT FK_LichSuXuLyDuLieu_DuLieuThuThap FOREIGN KEY (MaDuLieu) REFERENCES dbo.DuLieuThuThap(MaDuLieu)
+);
+GO
+
+CREATE TABLE dbo.LeadKhachHangNhuCau (
+    MaLead BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaDuLieu BIGINT,
+    TenKhachHang NVARCHAR(150),
+    SoDienThoai VARCHAR(20),
+    LinkProfileMXH NVARCHAR(1000),
+    NoiDungNhuCau NVARCHAR(2000),
+    NguonMXH NVARCHAR(100),
+    MaPhuongXa INT,
+    LoaiGiaoDich VARCHAR(10),
+    NgayQuet DATETIME2,
+    CONSTRAINT FK_LeadKhachHangNhuCau_DuLieuThuThap FOREIGN KEY (MaDuLieu) REFERENCES dbo.DuLieuThuThap(MaDuLieu),
+    CONSTRAINT FK_LeadKhachHangNhuCau_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa)
+);
+GO
+
+-- ==========================================
+-- 7. NHÓM QUẢN TRỊ & HỆ THỐNG
+-- ==========================================
+CREATE TABLE dbo.ThongBao (
+    MaThongBao BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    TieuDe NVARCHAR(200),
+    NoiDung NVARCHAR(1000),
+    LoaiThongBao VARCHAR(30),
+    DaDoc BIT,
+    NgayTao DATETIME2,
+    CONSTRAINT FK_ThongBao_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.BaoCaoTinDang (
+    MaBaoCao BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaTin BIGINT,
+    MaNguoiBaoCao BIGINT,
+    LyDo NVARCHAR(300),
+    MoTa NVARCHAR(1000),
+    TrangThai VARCHAR(20),
+    MaNguoiXuLy BIGINT,
+    NgayBaoCao DATETIME2,
+    NgayXuLy DATETIME2,
+    CONSTRAINT FK_BaoCaoTinDang_TinDang FOREIGN KEY (MaTin) REFERENCES dbo.TinDang(MaTin),
+    CONSTRAINT FK_BaoCaoTinDang_NguoiBaoCao FOREIGN KEY (MaNguoiBaoCao) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_BaoCaoTinDang_NguoiXuLy FOREIGN KEY (MaNguoiXuLy) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.NhatKyHeThong (
+    MaNhatKy BIGINT IDENTITY(1,1) PRIMARY KEY,
+    MaNguoiDung BIGINT,
+    HanhDong NVARCHAR(150),
+    DoiTuong NVARCHAR(100),
+    MaDoiTuong NVARCHAR(100),
+    DiaChiIP VARCHAR(45),
+    ThoiDiem DATETIME2,
+    CONSTRAINT FK_NhatKyHeThong_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung)
+);
+GO
+
+CREATE TABLE dbo.CauHinhHeThong (
+    MaCauHinh INT IDENTITY(1,1) PRIMARY KEY,
+    Khoa VARCHAR(100),
+    GiaTri NVARCHAR(MAX),
+    MoTa NVARCHAR(500),
+    NgayCapNhat DATETIME2
+);
+GO
+
+
+-- ====================================================================
+-- 7. DỮ LIỆU KHỞI TẠO BAN ĐẦU (SEED DATA CHO HỆ THỐNG)
+-- ====================================================================
+
+-- 1. Thêm Tỉnh Thành mẫu
+SET IDENTITY_INSERT dbo.TinhThanh ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.TinhThanh WHERE MaTinh = 1)
+    INSERT INTO dbo.TinhThanh (MaTinh, TenTinh, MaHanhChinh, TrangThai) VALUES (1, N'Nghệ An', 'NA', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.TinhThanh WHERE MaTinh = 2)
+    INSERT INTO dbo.TinhThanh (MaTinh, TenTinh, MaHanhChinh, TrangThai) VALUES (2, N'Hà Tĩnh', 'HT', 1);
+SET IDENTITY_INSERT dbo.TinhThanh OFF;
+GO
+
+-- 2. Thêm Quận Huyện mẫu
+SET IDENTITY_INSERT dbo.QuanHuyen ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 1)
+    INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (1, 1, N'Thành phố Vinh', 'VINH', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 2)
+    INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (2, 1, N'Thị xã Cửa Lò', 'CUALO', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 3)
+    INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (3, 1, N'Huyện Nghi Lộc', 'NGHILOC', 1);
+SET IDENTITY_INSERT dbo.QuanHuyen OFF;
+GO
+
+-- 3. Thêm Phường Xã mẫu
+SET IDENTITY_INSERT dbo.PhuongXa ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.PhuongXa WHERE MaPhuongXa = 1)
+    INSERT INTO dbo.PhuongXa (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai) VALUES (1, 1, N'Hưng Dũng', 'HD', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.PhuongXa WHERE MaPhuongXa = 2)
+    INSERT INTO dbo.PhuongXa (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai) VALUES (2, 1, N'Quang Trung', 'QT', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.PhuongXa WHERE MaPhuongXa = 3)
+    INSERT INTO dbo.PhuongXa (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai) VALUES (3, 1, N'Trường Thi', 'TT', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.PhuongXa WHERE MaPhuongXa = 4)
+    INSERT INTO dbo.PhuongXa (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai) VALUES (4, 1, N'Lê Lợi', 'LL', 1);
+SET IDENTITY_INSERT dbo.PhuongXa OFF;
+GO
+
+-- 4. Thêm Loại Bất Động Sản mẫu
+SET IDENTITY_INSERT dbo.LoaiBDS ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 1)
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (1, N'Bán Đất nền', N'Đất thổ cư, đất dự án', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 2)
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (2, N'Bán Nhà riêng / Biệt thự', N'Nhà phố, biệt thự liền kề', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 3)
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (3, N'Bán Căn hộ chung cư', N'Chung cư cao tầng, thương mại', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 4)
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (4, N'Cho thuê Nhà trọ / Căn hộ', N'Phòng trọ, nhà trọ sinh viên', 1);
+SET IDENTITY_INSERT dbo.LoaiBDS OFF;
+GO
+
+-- 5. Thêm Tài khoản Admin & Môi Giới Mẫu (Mật khẩu đăng nhập mặc định: 123456)
+SET IDENTITY_INSERT dbo.NguoiDung ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE MaNguoiDung = 1)
+    INSERT INTO dbo.NguoiDung (MaNguoiDung, HoTen, Email, SoDienThoai, HashMatKhau, VaiTro, TrangThai, NgayTao, NgayCapNhat)
+    VALUES (1, N'Quản Trị Viên', 'admin@nhatot.vn', '0988888888', 'AQAAAAIAAYagAAAAEFi0b5lyLup/F4DFf4+SN6i8MhdF0xBOyikVfpI4fwUyCjy6vBVtCfrQskCddd/Jxg==', 4, 'ACTIVE', SYSDATETIME(), SYSDATETIME());
+
+IF NOT EXISTS (SELECT 1 FROM dbo.NguoiDung WHERE MaNguoiDung = 2)
+    INSERT INTO dbo.NguoiDung (MaNguoiDung, HoTen, Email, SoDienThoai, HashMatKhau, VaiTro, TrangThai, NgayTao, NgayCapNhat)
+    VALUES (2, N'Nguyễn Văn Môi Giới', 'broker@nhatot.vn', '0912345678', 'AQAAAAIAAYagAAAAEFi0b5lyLup/F4DFf4+SN6i8MhdF0xBOyikVfpI4fwUyCjy6vBVtCfrQskCddd/Jxg==', 2, 'ACTIVE', SYSDATETIME(), SYSDATETIME());
+SET IDENTITY_INSERT dbo.NguoiDung OFF;
+GO
+
+-- 6. Khởi tạo Ví tài khoản mẫu
+SET IDENTITY_INSERT dbo.ViTaiKhoan ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.ViTaiKhoan WHERE MaVi = 1)
+    INSERT INTO dbo.ViTaiKhoan (MaVi, MaNguoiDung, SoDuDiem, TrangThai, NgayTao, NgayCapNhat)
+    VALUES (1, 1, 999999.00, 'ACTIVE', SYSDATETIME(), SYSDATETIME());
+IF NOT EXISTS (SELECT 1 FROM dbo.ViTaiKhoan WHERE MaVi = 2)
+    INSERT INTO dbo.ViTaiKhoan (MaVi, MaNguoiDung, SoDuDiem, TrangThai, NgayTao, NgayCapNhat)
+    VALUES (2, 2, 50000.00, 'ACTIVE', SYSDATETIME(), SYSDATETIME());
+SET IDENTITY_INSERT dbo.ViTaiKhoan OFF;
+GO
+
+-- 7. Thêm Bất Động Sản mẫu
+SET IDENTITY_INSERT dbo.BatDongSan ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.BatDongSan WHERE MaBDS = 1)
+    INSERT INTO dbo.BatDongSan (MaBDS, MaLoaiBDS, MaPhuongXa, DiaChiMoTa, TenDuAn, DienTichDat, DienTichSuDung, Huong, PhapLy, ViDo, KinhDo, MoTaDacDiem, NgayTao)
+    VALUES (1, 2, 1, N'Số 12 đường Nguyễn Viết Xuân, Phường Hưng Dũng', N'Khu dân cư Hưng Dũng', 120.0, 240.0, 'Đông Nam', N'Sổ hồng chính chủ', 18.6734, 105.6985, N'Nhà 2 tầng kiên cố, đường rộng 7m ô tô tránh nhau thoải mái.', SYSDATETIME());
+IF NOT EXISTS (SELECT 1 FROM dbo.BatDongSan WHERE MaBDS = 2)
+    INSERT INTO dbo.BatDongSan (MaBDS, MaLoaiBDS, MaPhuongXa, DiaChiMoTa, TenDuAn, DienTichDat, DienTichSuDung, Huong, PhapLy, ViDo, KinhDo, MoTaDacDiem, NgayTao)
+    VALUES (2, 1, 3, N'Đường An Dương Vương, Phường Trường Thi', N'KĐT Mới Trường Thi', 150.0, 150.0, 'Chính Nam', N'Đã có sổ đỏ', 18.6650, 105.6890, N'Đất thổ cư vuông vắn thích hợp xây biệt thự nghỉ dưỡng hoặc kinh doanh văn phòng.', SYSDATETIME());
+SET IDENTITY_INSERT dbo.BatDongSan OFF;
+GO
+
+-- 8. Thêm Tin Đăng mẫu
+SET IDENTITY_INSERT dbo.TinDang ON;
+IF NOT EXISTS (SELECT 1 FROM dbo.TinDang WHERE MaTin = 1)
+    INSERT INTO dbo.TinDang (MaTin, MaBDS, MaNguoiDang, LoaiGiaoDich, TieuDe, MoTa, GiaRaoVND, TienCocVND, TrangThai, NgayDang, NgayHetHan)
+    VALUES (1, 1, 2, 'BAN', N'Bán nhà đẹp 2 tầng mặt tiền Nguyễn Viết Xuân, P. Hưng Dũng', N'Cần bán nhà chính chủ 2 tầng đẹp, thiết kế hiện đại gồm 3 phòng ngủ, 2 WC, gara ô tô. Vị trí trung tâm gần đại học Y Khoa Vinh, bệnh viện Cửa Đông.', 2800000000, 100000000, 'APPROVED', SYSDATETIME(), DATEADD(day, 30, SYSDATETIME()));
+
+IF NOT EXISTS (SELECT 1 FROM dbo.TinDang WHERE MaTin = 2)
+    INSERT INTO dbo.TinDang (MaTin, MaBDS, MaNguoiDang, LoaiGiaoDich, TieuDe, MoTa, GiaRaoVND, TienCocVND, TrangThai, NgayDang, NgayHetHan)
+    VALUES (2, 2, 2, 'BAN', N'Đất vàng phân lô Trường Thi - Giá đầu tư sinh lời cao', N'Lô đất vị trí đắc địa phường Trường Thi, đường nhựa 12m có vỉa hè. Tiện ích xung quanh đầy đủ, gần quảng trường Hồ Chí Minh.', 4200000000, 200000000, 'APPROVED', SYSDATETIME(), DATEADD(day, 30, SYSDATETIME()));
+SET IDENTITY_INSERT dbo.TinDang OFF;
+GO
+
+-- ====================================================================
+-- CẬP NHẬT ĐỊA CHÍNH SAU SÁP NHẬP: BỔ SUNG TỌA ĐỘ VÀ PHƯỜNG XÃ NGHỆ AN & HÀ TĨNH
+-- ====================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.PhuongXa') AND name = 'ViDo')
+BEGIN
+    ALTER TABLE dbo.PhuongXa ADD ViDo DECIMAL(10,7) NULL, KinhDo DECIMAL(10,7) NULL;
+END
+GO
+
+SET IDENTITY_INSERT dbo.PhuongXa ON;
+MERGE INTO dbo.PhuongXa AS target
+USING (VALUES 
+    (1, 1, N'Phường Hưng Dũng', 'HD', 1, 18.6734, 105.6985),
+    (2, 1, N'Phường Quang Trung', 'QT', 1, 18.6780, 105.6790),
+    (3, 1, N'Phường Trường Thi', 'TT', 1, 18.6650, 105.6890),
+    (4, 1, N'Phường Lê Lợi', 'LL', 1, 18.6830, 105.6740),
+    (5, 1, N'Phường Bến Thủy', 'BT', 1, 18.6550, 105.6950),
+    (6, 1, N'Phường Cửa Nam', 'CN', 1, 18.6670, 105.6650),
+    (7, 1, N'Phường Đội Cung', 'DC', 1, 18.6750, 105.6690),
+    (8, 1, N'Phường Đông Vĩnh', 'DV', 1, 18.6880, 105.6590),
+    (9, 1, N'Phường Hà Huy Tập', 'HHT', 1, 18.6920, 105.6780),
+    (10, 1, N'Phường Hưng Bình', 'HB', 1, 18.6820, 105.6840),
+    (11, 1, N'Phường Hưng Phúc', 'HP', 1, 18.6750, 105.6880),
+    (12, 1, N'Phường Quán Bàu', 'QB', 1, 18.6970, 105.6720),
+    (13, 1, N'Phường Trung Đô', 'TD', 1, 18.6500, 105.6820),
+    (14, 1, N'Phường Lê Mao', 'LM', 1, 18.6700, 105.6800),
+    (15, 1, N'Phường Nghi Thu (TX Cửa Lò sáp nhập)', 'NT', 1, 18.8050, 105.7180),
+    (16, 1, N'Phường Nghi Hương (TX Cửa Lò sáp nhập)', 'NH', 1, 18.7980, 105.7250),
+    (17, 1, N'Phường Nghi Hải (TX Cửa Lò sáp nhập)', 'NHA', 1, 18.7850, 105.7350),
+    (18, 1, N'Phường Nghi Hòa (TX Cửa Lò sáp nhập)', 'NHO', 1, 18.7750, 105.7420),
+    (19, 1, N'Phường Nghi Tân (TX Cửa Lò sáp nhập)', 'NTA', 1, 18.8250, 105.7050),
+    (20, 1, N'Phường Nghi Thủy (TX Cửa Lò sáp nhập)', 'NTH', 1, 18.8350, 105.7100),
+    (21, 1, N'Phường Thu Thủy (TX Cửa Lò sáp nhập)', 'TT2', 1, 18.8150, 105.7120),
+    (22, 1, N'Xã Hưng Đông', 'HD2', 1, 18.6850, 105.6600),
+    (23, 1, N'Xã Hưng Lộc', 'HL', 1, 18.6800, 105.7100),
+    (24, 1, N'Xã Nghi Ân', 'NA1', 1, 18.7200, 105.7150),
+    (25, 1, N'Xã Nghi Đức', 'ND', 1, 18.7050, 105.7200),
+    (26, 1, N'Xã Nghi Kim', 'NK', 1, 18.7180, 105.6700),
+    (27, 1, N'Xã Nghi Liên', 'NL', 1, 18.7300, 105.6650),
+    (28, 1, N'Xã Nghi Phú', 'NP', 1, 18.7100, 105.6850),
+    -- Phường xã Tỉnh Hà Tĩnh
+    (29, 4, N'Phường Bắc Hà (TP Hà Tĩnh)', 'BH', 1, 18.3430, 105.9050),
+    (30, 4, N'Phường Nam Hà (TP Hà Tĩnh)', 'NH1', 1, 18.3380, 105.9080),
+    (31, 4, N'Phường Trần Phú (TP Hà Tĩnh)', 'TP', 1, 18.3480, 105.8980),
+    (32, 4, N'Phường Hà Huy Tập (TP Hà Tĩnh)', 'HHT2', 1, 18.3550, 105.8920),
+    (33, 4, N'Phường Tân Giang (TP Hà Tĩnh)', 'TG', 1, 18.3410, 105.9120),
+    (34, 4, N'Phường Đại Nài (TP Hà Tĩnh)', 'DN', 1, 18.3200, 105.9150),
+    (35, 4, N'Phường Thạch Linh (TP Hà Tĩnh)', 'TL', 1, 18.3450, 105.8850),
+    (36, 4, N'Phường Thạch Quý (TP Hà Tĩnh)', 'TQ', 1, 18.3500, 105.9150),
+    (37, 4, N'Phường Văn Yên (TP Hà Tĩnh)', 'VY', 1, 18.3300, 105.9250),
+    (38, 4, N'Phường Nguyễn Du (TP Hà Tĩnh)', 'ND2', 1, 18.3550, 105.9050),
+    (39, 4, N'Phường Bắc Hồng (TX Hồng Lĩnh)', 'BHO', 1, 18.5350, 105.7080),
+    (40, 4, N'Phường Nam Hồng (TX Hồng Lĩnh)', 'NHO2', 1, 18.5250, 105.7120),
+    (41, 4, N'Phường Sông Trí (TX Kỳ Anh)', 'ST', 1, 18.0650, 106.2950),
+    (42, 4, N'Phường Kỳ Liên (TX Kỳ Anh)', 'KL', 1, 18.0450, 106.3150),
+    (43, 4, N'Phường Kỳ Long (TX Kỳ Anh)', 'KLO', 1, 18.0350, 106.3250),
+    (44, 4, N'Phường Kỳ Phương (TX Kỳ Anh)', 'KP', 1, 18.0150, 106.3450),
+    (45, 4, N'Phường Kỳ Thịnh (TX Kỳ Anh)', 'KT', 1, 18.0250, 106.3350),
+    (46, 4, N'Xã Thạch Trung (TP Hà Tĩnh)', 'TT3', 1, 18.3650, 105.8950),
+    (47, 4, N'Xã Thạch Hạ (TP Hà Tĩnh)', 'TH', 1, 18.3750, 105.9100)
+) AS source (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
+ON target.MaPhuongXa = source.MaPhuongXa
+WHEN MATCHED THEN
+    UPDATE SET TenPhuongXa = source.TenPhuongXa, MaQuanHuyen = source.MaQuanHuyen, TrangThai = source.TrangThai, ViDo = source.ViDo, KinhDo = source.KinhDo
+WHEN NOT MATCHED THEN
+    INSERT (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
+    VALUES (source.MaPhuongXa, source.MaQuanHuyen, source.TenPhuongXa, source.MaHanhChinh, source.TrangThai, source.ViDo, source.KinhDo);
+SET IDENTITY_INSERT dbo.PhuongXa OFF;
+GO
+
+-- ===============================================================
+-- CẬP NHẬT ĐỊA CHÍNH 2026: THEO NGHỊ QUYẾT 1243 & 1283 CỦA UBTVQH
+-- ===============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.PhuongXa') AND name = 'ViDo')
+BEGIN
+    ALTER TABLE dbo.PhuongXa ADD ViDo DECIMAL(10,7) NULL, KinhDo DECIMAL(10,7) NULL;
+END
+GO
+
+DELETE FROM dbo.PhuongXa WHERE MaPhuongXa > 4;
+GO
+
+SET IDENTITY_INSERT dbo.PhuongXa ON;
+
+MERGE INTO dbo.PhuongXa AS target
+USING (VALUES
+    -- ===============================================================
+    -- TỈNH NGHỆ AN - KHÔNG GIAN ĐÔ THỊ THÀNH PHỐ VINH MỞ RỘNG (33 ĐƠN VỊ)
+    -- ===============================================================
+    (1, 1, N'Phường Hưng Dũng', 'NA-HD', 1, 18.6734, 105.6985),
+    (2, 1, N'Phường Quang Trung (sáp nhập Đội Cung, Lê Mao)', 'NA-QT', 1, 18.6750, 105.6750),
+    (3, 1, N'Phường Trường Thi', 'NA-TT', 1, 18.6650, 105.6890),
+    (4, 1, N'Phường Lê Lợi', 'NA-LL', 1, 18.6830, 105.6740),
+    (5, 1, N'Phường Bến Thủy', 'NA-BT', 1, 18.6550, 105.6950),
+    (6, 1, N'Phường Cửa Nam', 'NA-CN', 1, 18.6670, 105.6650),
+    (7, 1, N'Phường Đông Vĩnh', 'NA-DV', 1, 18.6880, 105.6590),
+    (8, 1, N'Phường Hà Huy Tập', 'NA-HHT', 1, 18.6920, 105.6780),
+    (9, 1, N'Phường Hưng Bình', 'NA-HB', 1, 18.6820, 105.6840),
+    (10, 1, N'Phường Hưng Đông (lên phường)', 'NA-HDO', 1, 18.6850, 105.6600),
+    (11, 1, N'Phường Hưng Lộc (lên phường)', 'NA-HL', 1, 18.6800, 105.7100),
+    (12, 1, N'Phường Hưng Phúc', 'NA-HP', 1, 18.6750, 105.6880),
+    (13, 1, N'Phường Nghi Đức (lên phường)', 'NA-ND', 1, 18.7050, 105.7200),
+    (14, 1, N'Phường Nghi Hải (Cửa Lò sáp nhập)', 'NA-NHAI', 1, 18.7850, 105.7350),
+    (15, 1, N'Phường Nghi Hòa (Cửa Lò sáp nhập)', 'NA-NHOA', 1, 18.7750, 105.7420),
+    (16, 1, N'Phường Nghi Hương (Cửa Lò sáp nhập)', 'NA-NHUONG', 1, 18.7980, 105.7250),
+    (17, 1, N'Phường Nghi Phú (lên phường)', 'NA-NP', 1, 18.7100, 105.6850),
+    (18, 1, N'Phường Nghi Thu (Cửa Lò sáp nhập)', 'NA-NTHU', 1, 18.8050, 105.7180),
+    (19, 1, N'Phường Nghi Thủy (Cửa Lò sáp nhập)', 'NA-NTHUY', 1, 18.8350, 105.7100),
+    (20, 1, N'Phường Nghi Tân (Cửa Lò sáp nhập)', 'NA-NTAN', 1, 18.8250, 105.7050),
+    (21, 1, N'Phường Quán Bàu', 'NA-QB', 1, 18.6970, 105.6720),
+    (22, 1, N'Phường Thu Thủy (Cửa Lò sáp nhập)', 'NA-TTHUY', 1, 18.8150, 105.7120),
+    (23, 1, N'Phường Trung Đô', 'NA-TD', 1, 18.6500, 105.6820),
+    (24, 1, N'Phường Vinh Tân (sáp nhập Hồng Sơn)', 'NA-VT', 1, 18.6600, 105.6700),
+    (25, 1, N'Xã Hưng Chính', 'NA-HC', 1, 18.6600, 105.6350),
+    (26, 1, N'Xã Hưng Hòa', 'NA-HHOA', 1, 18.6650, 105.7250),
+    (27, 1, N'Xã Nghi Ân', 'NA-NAN', 1, 18.7200, 105.7150),
+    (28, 1, N'Xã Nghi Kim', 'NA-NKIM', 1, 18.7180, 105.6700),
+    (29, 1, N'Xã Nghi Phong (Nghi Lộc sáp nhập)', 'NA-NPHONG', 1, 18.7300, 105.7350),
+    (30, 1, N'Xã Nghi Thái (Nghi Lộc sáp nhập)', 'NA-NTHAI', 1, 18.7150, 105.7500),
+    (31, 1, N'Xã Phúc Thọ (Nghi Lộc sáp nhập)', 'NA-PT', 1, 18.7450, 105.7400),
+    (32, 1, N'Xã Nghi Xuân (Nghi Lộc sáp nhập)', 'NA-NX', 1, 18.7600, 105.7300),
+
+    -- ===============================================================
+    -- TỈNH HÀ TĨNH - KHÔNG GIAN ĐÔ THỊ THÀNH PHỐ HÀ TĨNH MỞ RỘNG (27 ĐƠN VỊ)
+    -- ===============================================================
+    (33, 4, N'Phường Bắc Hà (sáp nhập Nguyễn Du)', 'HT-BH', 1, 18.3450, 105.9050),
+    (34, 4, N'Phường Đại Nài', 'HT-DN', 1, 18.3200, 105.9150),
+    (35, 4, N'Phường Đồng Môn (Thạch Đồng + Thạch Môn lên phường)', 'HT-DM', 1, 18.3600, 105.9300),
+    (36, 4, N'Phường Hà Huy Tập', 'HT-HHT', 1, 18.3550, 105.8920),
+    (37, 4, N'Phường Nam Hà', 'HT-NH', 1, 18.3380, 105.9080),
+    (38, 4, N'Phường Tân Giang', 'HT-TG', 1, 18.3410, 105.9120),
+    (39, 4, N'Phường Thạch Hạ (lên phường)', 'HT-THA', 1, 18.3750, 105.9100),
+    (40, 4, N'Phường Thạch Hưng (lên phường)', 'HT-THUNG', 1, 18.3450, 105.9350),
+    (41, 4, N'Phường Thạch Trung (lên phường)', 'HT-TTRUNG', 1, 18.3650, 105.8950),
+    (42, 4, N'Phường Thạch Quý', 'HT-TQ', 1, 18.3500, 105.9150),
+    (43, 4, N'Phường Trần Phú (sáp nhập Thạch Linh)', 'HT-TP', 1, 18.3480, 105.8900),
+    (44, 4, N'Phường Văn Yên', 'HT-VY', 1, 18.3300, 105.9250),
+    (45, 4, N'Xã Thạch Bình', 'HT-TB', 1, 18.3100, 105.9200),
+    (46, 4, N'Xã Tân Lâm Hương (Thạch Hà sáp nhập)', 'HT-TLH', 1, 18.3150, 105.8750),
+    (47, 4, N'Xã Thạch Đài (Thạch Hà sáp nhập)', 'HT-TD', 1, 18.3350, 105.8600),
+    (48, 4, N'Xã Thạch Hải (Thạch Hà sáp nhập)', 'HT-THAI', 1, 18.3850, 105.9600),
+    (49, 4, N'Xã Thạch Khê (Thạch Hà sáp nhập)', 'HT-TK', 1, 18.3600, 105.9800),
+    (50, 4, N'Xã Thạch Lạc (Thạch Hà sáp nhập)', 'HT-TL', 1, 18.3400, 105.9900),
+    (51, 4, N'Xã Thạch Trị (Thạch Hà sáp nhập)', 'HT-TTRI', 1, 18.3200, 106.0100),
+    (52, 4, N'Xã Thạch Văn (Thạch Hà sáp nhập)', 'HT-TV', 1, 18.3050, 106.0250),
+    (53, 4, N'Xã Đỉnh Bàn (Thạch Hà sáp nhập)', 'HT-DB', 1, 18.4100, 105.9300),
+    (54, 4, N'Xã Hộ Độ (Lộc Hà sáp nhập)', 'HT-HD', 1, 18.3950, 105.9050),
+    (55, 4, N'Xã Cẩm Bình (Cẩm Xuyên sáp nhập)', 'HT-CB', 1, 18.2800, 105.9300),
+    (56, 4, N'Xã Cẩm Vịnh (Cẩm Xuyên sáp nhập)', 'HT-CV', 1, 18.2950, 105.9100)
+) AS source (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
+ON target.MaPhuongXa = source.MaPhuongXa
+WHEN MATCHED THEN
+    UPDATE SET TenPhuongXa = source.TenPhuongXa, MaQuanHuyen = source.MaQuanHuyen, TrangThai = source.TrangThai, ViDo = source.ViDo, KinhDo = source.KinhDo, MaHanhChinh = source.MaHanhChinh
+WHEN NOT MATCHED THEN
+    INSERT (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
+    VALUES (source.MaPhuongXa, source.MaQuanHuyen, source.TenPhuongXa, source.MaHanhChinh, source.TrangThai, source.ViDo, source.KinhDo);
+
+SET IDENTITY_INSERT dbo.PhuongXa OFF;
+GO
