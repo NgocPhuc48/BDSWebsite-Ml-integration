@@ -598,7 +598,7 @@ SET IDENTITY_INSERT dbo.PhuongXa OFF;
 GO
 
 -- ===============================================================
--- CẬP NHẬT ĐỊA CHÍNH 2026: THEO NGHỊ QUYẾT 1243 & 1283 CỦA UBTVQH
+-- CẬP NHẬT ĐỊA CHÍNH MỚI NHẤT 2026: SẮP XẾP SÁP NHẬP NGHỆ AN & HÀ TĨNH
 -- ===============================================================
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.PhuongXa') AND name = 'ViDo')
 BEGIN
@@ -606,7 +606,12 @@ BEGIN
 END
 GO
 
-DELETE FROM dbo.PhuongXa WHERE MaPhuongXa > 4;
+ALTER TABLE dbo.BatDongSan NOCHECK CONSTRAINT ALL;
+UPDATE dbo.BatDongSan SET MaPhuongXa = 1, DiaChiMoTa = N'Số 12 đường Nguyễn Viết Xuân, Phường Trường Vinh' WHERE MaBDS = 1;
+UPDATE dbo.BatDongSan SET MaPhuongXa = 1, DiaChiMoTa = N'Đường An Dương Vương, Phường Trường Vinh' WHERE MaBDS = 2;
+
+DELETE FROM dbo.PhuongXa;
+DBCC CHECKIDENT ('dbo.PhuongXa', RESEED, 0);
 GO
 
 SET IDENTITY_INSERT dbo.PhuongXa ON;
@@ -614,68 +619,31 @@ SET IDENTITY_INSERT dbo.PhuongXa ON;
 MERGE INTO dbo.PhuongXa AS target
 USING (VALUES
     -- ===============================================================
-    -- TỈNH NGHỆ AN - KHÔNG GIAN ĐÔ THỊ THÀNH PHỐ VINH MỞ RỘNG (33 ĐƠN VỊ)
+    -- TỈNH NGHỆ AN (Mã quận/huyện 1: Thành phố Vinh mới nhất 2026)
     -- ===============================================================
-    (1, 1, N'Phường Hưng Dũng', 'NA-HD', 1, 18.6734, 105.6985),
-    (2, 1, N'Phường Quang Trung (sáp nhập Đội Cung, Lê Mao)', 'NA-QT', 1, 18.6750, 105.6750),
-    (3, 1, N'Phường Trường Thi', 'NA-TT', 1, 18.6650, 105.6890),
-    (4, 1, N'Phường Lê Lợi', 'NA-LL', 1, 18.6830, 105.6740),
-    (5, 1, N'Phường Bến Thủy', 'NA-BT', 1, 18.6550, 105.6950),
-    (6, 1, N'Phường Cửa Nam', 'NA-CN', 1, 18.6670, 105.6650),
-    (7, 1, N'Phường Đông Vĩnh', 'NA-DV', 1, 18.6880, 105.6590),
-    (8, 1, N'Phường Hà Huy Tập', 'NA-HHT', 1, 18.6920, 105.6780),
-    (9, 1, N'Phường Hưng Bình', 'NA-HB', 1, 18.6820, 105.6840),
-    (10, 1, N'Phường Hưng Đông (lên phường)', 'NA-HDO', 1, 18.6850, 105.6600),
-    (11, 1, N'Phường Hưng Lộc (lên phường)', 'NA-HL', 1, 18.6800, 105.7100),
-    (12, 1, N'Phường Hưng Phúc', 'NA-HP', 1, 18.6750, 105.6880),
-    (13, 1, N'Phường Nghi Đức (lên phường)', 'NA-ND', 1, 18.7050, 105.7200),
-    (14, 1, N'Phường Nghi Hải (Cửa Lò sáp nhập)', 'NA-NHAI', 1, 18.7850, 105.7350),
-    (15, 1, N'Phường Nghi Hòa (Cửa Lò sáp nhập)', 'NA-NHOA', 1, 18.7750, 105.7420),
-    (16, 1, N'Phường Nghi Hương (Cửa Lò sáp nhập)', 'NA-NHUONG', 1, 18.7980, 105.7250),
-    (17, 1, N'Phường Nghi Phú (lên phường)', 'NA-NP', 1, 18.7100, 105.6850),
-    (18, 1, N'Phường Nghi Thu (Cửa Lò sáp nhập)', 'NA-NTHU', 1, 18.8050, 105.7180),
-    (19, 1, N'Phường Nghi Thủy (Cửa Lò sáp nhập)', 'NA-NTHUY', 1, 18.8350, 105.7100),
-    (20, 1, N'Phường Nghi Tân (Cửa Lò sáp nhập)', 'NA-NTAN', 1, 18.8250, 105.7050),
-    (21, 1, N'Phường Quán Bàu', 'NA-QB', 1, 18.6970, 105.6720),
-    (22, 1, N'Phường Thu Thủy (Cửa Lò sáp nhập)', 'NA-TTHUY', 1, 18.8150, 105.7120),
-    (23, 1, N'Phường Trung Đô', 'NA-TD', 1, 18.6500, 105.6820),
-    (24, 1, N'Phường Vinh Tân (sáp nhập Hồng Sơn)', 'NA-VT', 1, 18.6600, 105.6700),
-    (25, 1, N'Xã Hưng Chính', 'NA-HC', 1, 18.6600, 105.6350),
-    (26, 1, N'Xã Hưng Hòa', 'NA-HHOA', 1, 18.6650, 105.7250),
-    (27, 1, N'Xã Nghi Ân', 'NA-NAN', 1, 18.7200, 105.7150),
-    (28, 1, N'Xã Nghi Kim', 'NA-NKIM', 1, 18.7180, 105.6700),
-    (29, 1, N'Xã Nghi Phong (Nghi Lộc sáp nhập)', 'NA-NPHONG', 1, 18.7300, 105.7350),
-    (30, 1, N'Xã Nghi Thái (Nghi Lộc sáp nhập)', 'NA-NTHAI', 1, 18.7150, 105.7500),
-    (31, 1, N'Xã Phúc Thọ (Nghi Lộc sáp nhập)', 'NA-PT', 1, 18.7450, 105.7400),
-    (32, 1, N'Xã Nghi Xuân (Nghi Lộc sáp nhập)', 'NA-NX', 1, 18.7600, 105.7300),
+    (1, 1, N'Phường Trường Vinh', 'NA-TV', 1, 18.6685, 105.6900), -- Sáp nhập: Trường Thi, Bến Thủy, Trung Đô, Vinh Tân, Hưng Dũng, Hưng Phúc, Hưng Hòa
+    (2, 1, N'Phường Thành Vinh', 'NA-THV', 1, 18.6790, 105.6700), -- Sáp nhập: Quang Trung, Cửa Nam, Lê Lợi, Hưng Bình, Đông Vĩnh, Hưng Chính
+    (3, 1, N'Phường Vinh Hưng', 'NA-VH', 1, 18.7050, 105.6650),   -- Sáp nhập: Hưng Đông, Quán Bàu, Nghi Kim, Nghi Liên
+    (4, 1, N'Phường Vinh Phú', 'NA-VP', 1, 18.7000, 105.7000),    -- Sáp nhập: Hà Huy Tập, Nghi Đức, Nghi Phú, Nghi Ân
+    (5, 1, N'Phường Vinh Lộc', 'NA-VL', 1, 18.7200, 105.7350),    -- Sáp nhập: Hưng Lộc, Nghi Phong, Nghi Thái, Nghi Xuân, Phúc Thọ
+    (6, 1, N'Phường Cửa Lò', 'NA-CL', 1, 18.8050, 105.7200),      -- Toàn bộ đô thị biển Cửa Lò (Nghi Hải, Nghi Hòa, Nghi Hương, Nghi Tân, Nghi Thu, Nghi Thủy, Thu Thủy)
 
     -- ===============================================================
-    -- TỈNH HÀ TĨNH - KHÔNG GIAN ĐÔ THỊ THÀNH PHỐ HÀ TĨNH MỞ RỘNG (27 ĐƠN VỊ)
+    -- TỈNH HÀ TĨNH (Mã quận/huyện 4: Thành phố Hà Tĩnh & các đô thị 2026)
     -- ===============================================================
-    (33, 4, N'Phường Bắc Hà (sáp nhập Nguyễn Du)', 'HT-BH', 1, 18.3450, 105.9050),
-    (34, 4, N'Phường Đại Nài', 'HT-DN', 1, 18.3200, 105.9150),
-    (35, 4, N'Phường Đồng Môn (Thạch Đồng + Thạch Môn lên phường)', 'HT-DM', 1, 18.3600, 105.9300),
-    (36, 4, N'Phường Hà Huy Tập', 'HT-HHT', 1, 18.3550, 105.8920),
-    (37, 4, N'Phường Nam Hà', 'HT-NH', 1, 18.3380, 105.9080),
-    (38, 4, N'Phường Tân Giang', 'HT-TG', 1, 18.3410, 105.9120),
-    (39, 4, N'Phường Thạch Hạ (lên phường)', 'HT-THA', 1, 18.3750, 105.9100),
-    (40, 4, N'Phường Thạch Hưng (lên phường)', 'HT-THUNG', 1, 18.3450, 105.9350),
-    (41, 4, N'Phường Thạch Trung (lên phường)', 'HT-TTRUNG', 1, 18.3650, 105.8950),
-    (42, 4, N'Phường Thạch Quý', 'HT-TQ', 1, 18.3500, 105.9150),
-    (43, 4, N'Phường Trần Phú (sáp nhập Thạch Linh)', 'HT-TP', 1, 18.3480, 105.8900),
-    (44, 4, N'Phường Văn Yên', 'HT-VY', 1, 18.3300, 105.9250),
-    (45, 4, N'Xã Thạch Bình', 'HT-TB', 1, 18.3100, 105.9200),
-    (46, 4, N'Xã Tân Lâm Hương (Thạch Hà sáp nhập)', 'HT-TLH', 1, 18.3150, 105.8750),
-    (47, 4, N'Xã Thạch Đài (Thạch Hà sáp nhập)', 'HT-TD', 1, 18.3350, 105.8600),
-    (48, 4, N'Xã Thạch Hải (Thạch Hà sáp nhập)', 'HT-THAI', 1, 18.3850, 105.9600),
-    (49, 4, N'Xã Thạch Khê (Thạch Hà sáp nhập)', 'HT-TK', 1, 18.3600, 105.9800),
-    (50, 4, N'Xã Thạch Lạc (Thạch Hà sáp nhập)', 'HT-TL', 1, 18.3400, 105.9900),
-    (51, 4, N'Xã Thạch Trị (Thạch Hà sáp nhập)', 'HT-TTRI', 1, 18.3200, 106.0100),
-    (52, 4, N'Xã Thạch Văn (Thạch Hà sáp nhập)', 'HT-TV', 1, 18.3050, 106.0250),
-    (53, 4, N'Xã Đỉnh Bàn (Thạch Hà sáp nhập)', 'HT-DB', 1, 18.4100, 105.9300),
-    (54, 4, N'Xã Hộ Độ (Lộc Hà sáp nhập)', 'HT-HD', 1, 18.3950, 105.9050),
-    (55, 4, N'Xã Cẩm Bình (Cẩm Xuyên sáp nhập)', 'HT-CB', 1, 18.2800, 105.9300),
-    (56, 4, N'Xã Cẩm Vịnh (Cẩm Xuyên sáp nhập)', 'HT-CV', 1, 18.2950, 105.9100)
+    (7, 4, N'Phường Thành Sen', 'HT-TS', 1, 18.3420, 105.9080),   -- Sáp nhập: Bắc Hà, Nam Hà, Tân Giang, Thạch Quý, Thạch Hưng, Văn Yên, một phần Đại Nài
+    (8, 4, N'Phường Trần Phú', 'HT-TP', 1, 18.3650, 105.9050),    -- Hợp nhất: Trần Phú, Thạch Linh, Thạch Trung, Đồng Môn, Thạch Hạ, Hộ Độ
+    (9, 4, N'Phường Hà Huy Tập', 'HT-HHT', 1, 18.3350, 105.8850), -- Hợp nhất: Hà Huy Tập, Tân Lâm Hương, Thạch Đài, phần còn lại của Đại Nài
+    (10, 4, N'Xã Thạch Lạc', 'HT-TL', 1, 18.3400, 105.9900),
+    (11, 4, N'Xã Đồng Tiến', 'HT-DT', 1, 18.3550, 105.9400),
+    (12, 4, N'Xã Thạch Khê', 'HT-TK', 1, 18.3600, 105.9800),
+    (13, 4, N'Xã Cẩm Bình', 'HT-CB', 1, 18.2800, 105.9300),
+    (14, 4, N'Phường Sông Trí', 'HT-ST', 1, 18.0650, 106.2950),   -- Thị xã Kỳ Anh
+    (15, 4, N'Phường Hải Ninh', 'HT-HN', 1, 18.0950, 106.3200),   -- Thị xã Kỳ Anh
+    (16, 4, N'Phường Hoành Sơn', 'HT-HS', 1, 17.9650, 106.4500),  -- Thị xã Kỳ Anh
+    (17, 4, N'Phường Vũng Áng', 'HT-VA', 1, 18.0150, 106.3800),   -- Thị xã Kỳ Anh
+    (18, 4, N'Phường Bắc Hồng', 'HT-BH', 1, 18.5450, 105.7150),   -- Thị xã Hồng Lĩnh
+    (19, 4, N'Phường Nam Hồng', 'HT-NH', 1, 18.5350, 105.7100)    -- Thị xã Hồng Lĩnh
 ) AS source (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
 ON target.MaPhuongXa = source.MaPhuongXa
 WHEN MATCHED THEN
@@ -685,4 +653,5 @@ WHEN NOT MATCHED THEN
     VALUES (source.MaPhuongXa, source.MaQuanHuyen, source.TenPhuongXa, source.MaHanhChinh, source.TrangThai, source.ViDo, source.KinhDo);
 
 SET IDENTITY_INSERT dbo.PhuongXa OFF;
+ALTER TABLE dbo.BatDongSan CHECK CONSTRAINT ALL;
 GO
