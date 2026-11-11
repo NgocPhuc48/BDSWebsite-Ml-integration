@@ -619,31 +619,76 @@ SET IDENTITY_INSERT dbo.PhuongXa ON;
 MERGE INTO dbo.PhuongXa AS target
 USING (VALUES
     -- ===============================================================
-    -- TỈNH NGHỆ AN (Mã quận/huyện 1: Thành phố Vinh mới nhất 2026)
+    -- TỈNH NGHỆ AN (Mã quận/huyện 1: TP. Vinh & Các xã sáp nhập mới nhất 2026)
     -- ===============================================================
-    (1, 1, N'Phường Trường Vinh', 'NA-TV', 1, 18.6685, 105.6900), -- Sáp nhập: Trường Thi, Bến Thủy, Trung Đô, Vinh Tân, Hưng Dũng, Hưng Phúc, Hưng Hòa
-    (2, 1, N'Phường Thành Vinh', 'NA-THV', 1, 18.6790, 105.6700), -- Sáp nhập: Quang Trung, Cửa Nam, Lê Lợi, Hưng Bình, Đông Vĩnh, Hưng Chính
-    (3, 1, N'Phường Vinh Hưng', 'NA-VH', 1, 18.7050, 105.6650),   -- Sáp nhập: Hưng Đông, Quán Bàu, Nghi Kim, Nghi Liên
-    (4, 1, N'Phường Vinh Phú', 'NA-VP', 1, 18.7000, 105.7000),    -- Sáp nhập: Hà Huy Tập, Nghi Đức, Nghi Phú, Nghi Ân
-    (5, 1, N'Phường Vinh Lộc', 'NA-VL', 1, 18.7200, 105.7350),    -- Sáp nhập: Hưng Lộc, Nghi Phong, Nghi Thái, Nghi Xuân, Phúc Thọ
-    (6, 1, N'Phường Cửa Lò', 'NA-CL', 1, 18.8050, 105.7200),      -- Toàn bộ đô thị biển Cửa Lò (Nghi Hải, Nghi Hòa, Nghi Hương, Nghi Tân, Nghi Thu, Nghi Thủy, Thu Thủy)
+    (1, 1, N'Phường Trường Vinh', 'NA-TV', 1, 18.6685, 105.6900),
+    (2, 1, N'Phường Thành Vinh', 'NA-THV', 1, 18.6790, 105.6700),
+    (3, 1, N'Phường Vinh Hưng', 'NA-VH', 1, 18.7050, 105.6650),
+    (4, 1, N'Phường Vinh Phú', 'NA-VP', 1, 18.7000, 105.7000),
+    (5, 1, N'Phường Vinh Lộc', 'NA-VL', 1, 18.7200, 105.7350),
+    (6, 1, N'Phường Cửa Lò', 'NA-CL', 1, 18.8050, 105.7200),
+    (20, 1, N'Xã Diên Hoa', 'NA-DH', 1, 18.7800, 105.6200),
+    (21, 1, N'Xã Thịnh Trường', 'NA-TT', 1, 18.7700, 105.6700),
+    (22, 1, N'Xã Thịnh Mỹ', 'NA-TM', 1, 18.6400, 105.6300),
+    (23, 1, N'Xã Thông Tân', 'NA-TTN', 1, 18.6600, 105.5800),
+    (24, 1, N'Xã Phúc Lợi', 'NA-PL', 1, 18.6200, 105.6600),
+    (25, 1, N'Xã Nghĩa Thái', 'NA-NT', 1, 18.7100, 105.4800),
+    (26, 1, N'Xã Xuân Hồng', 'NA-XH', 1, 18.6600, 105.5200),
+    (27, 1, N'Xã Xuân Tháp', 'NA-XT', 1, 18.9900, 105.5500),
+    (28, 1, N'Xã Ngọc Bích', 'NA-NB', 1, 18.9800, 105.6000),
+    (29, 1, N'Xã Hùng Hải', 'NA-HH', 1, 19.0800, 105.6100),
+    (30, 1, N'Xã Hạnh Quảng', 'NA-HQ', 1, 18.9700, 105.5400),
+    (31, 1, N'Xã Thuận Long', 'NA-TL', 1, 19.1600, 105.7100),
+    (32, 1, N'Xã Phú Nghĩa', 'NA-PN', 1, 19.1400, 105.7200),
+    (33, 1, N'Xã Văn Hải', 'NA-VHAI', 1, 19.1300, 105.6900),
+    (34, 1, N'Xã Bình Sơn', 'NA-BS', 1, 19.2000, 105.6500),
+    (35, 1, N'Xã Bạch Ngọc', 'NA-BN', 1, 18.8900, 105.3500),
+    (36, 1, N'Xã Minh Sơn', 'NA-MS', 1, 18.7200, 105.3200),
+    (37, 1, N'Xã Thanh Quả', 'NA-TQ', 1, 18.6800, 105.3000),
+    (38, 1, N'Xã Kim Bảng', 'NA-KB', 1, 18.7600, 105.2800),
+    (39, 1, N'Xã Vân Tụ', 'NA-VTU', 1, 19.0100, 105.4700),
+    (40, 1, N'Xã Đông Thành', 'NA-DT', 1, 19.0300, 105.4900),
+    (41, 1, N'Xã Bình Hợp', 'NA-BH', 1, 19.3000, 105.1500),
+    (42, 1, N'Xã Tam Đỉnh', 'NA-TD', 1, 18.9500, 105.1000),
 
     -- ===============================================================
-    -- TỈNH HÀ TĨNH (Mã quận/huyện 4: Thành phố Hà Tĩnh & các đô thị 2026)
+    -- TỈNH HÀ TĨNH (Mã quận/huyện 4: TP. Hà Tĩnh & Các xã sáp nhập mới nhất 2026)
     -- ===============================================================
-    (7, 4, N'Phường Thành Sen', 'HT-TS', 1, 18.3420, 105.9080),   -- Sáp nhập: Bắc Hà, Nam Hà, Tân Giang, Thạch Quý, Thạch Hưng, Văn Yên, một phần Đại Nài
-    (8, 4, N'Phường Trần Phú', 'HT-TP', 1, 18.3650, 105.9050),    -- Hợp nhất: Trần Phú, Thạch Linh, Thạch Trung, Đồng Môn, Thạch Hạ, Hộ Độ
-    (9, 4, N'Phường Hà Huy Tập', 'HT-HHT', 1, 18.3350, 105.8850), -- Hợp nhất: Hà Huy Tập, Tân Lâm Hương, Thạch Đài, phần còn lại của Đại Nài
+    (7, 4, N'Phường Thành Sen', 'HT-TS', 1, 18.3420, 105.9080),
+    (8, 4, N'Phường Trần Phú', 'HT-TP', 1, 18.3650, 105.9050),
+    (9, 4, N'Phường Hà Huy Tập', 'HT-HHT', 1, 18.3350, 105.8850),
     (10, 4, N'Xã Thạch Lạc', 'HT-TL', 1, 18.3400, 105.9900),
     (11, 4, N'Xã Đồng Tiến', 'HT-DT', 1, 18.3550, 105.9400),
     (12, 4, N'Xã Thạch Khê', 'HT-TK', 1, 18.3600, 105.9800),
     (13, 4, N'Xã Cẩm Bình', 'HT-CB', 1, 18.2800, 105.9300),
-    (14, 4, N'Phường Sông Trí', 'HT-ST', 1, 18.0650, 106.2950),   -- Thị xã Kỳ Anh
-    (15, 4, N'Phường Hải Ninh', 'HT-HN', 1, 18.0950, 106.3200),   -- Thị xã Kỳ Anh
-    (16, 4, N'Phường Hoành Sơn', 'HT-HS', 1, 17.9650, 106.4500),  -- Thị xã Kỳ Anh
-    (17, 4, N'Phường Vũng Áng', 'HT-VA', 1, 18.0150, 106.3800),   -- Thị xã Kỳ Anh
-    (18, 4, N'Phường Bắc Hồng', 'HT-BH', 1, 18.5450, 105.7150),   -- Thị xã Hồng Lĩnh
-    (19, 4, N'Phường Nam Hồng', 'HT-NH', 1, 18.5350, 105.7100)    -- Thị xã Hồng Lĩnh
+    (14, 4, N'Phường Sông Trí', 'HT-ST', 1, 18.0650, 106.2950),
+    (15, 4, N'Phường Hải Ninh', 'HT-HN', 1, 18.0950, 106.3200),
+    (16, 4, N'Phường Hoành Sơn', 'HT-HS', 1, 17.9650, 106.4500),
+    (17, 4, N'Phường Vũng Áng', 'HT-VA', 1, 18.0150, 106.3800),
+    (18, 4, N'Phường Bắc Hồng', 'HT-BH', 1, 18.5450, 105.7150),
+    (19, 4, N'Phường Nam Hồng', 'HT-NH', 1, 18.5350, 105.7100),
+    (43, 4, N'Xã Tân Lâm Hương', 'HT-TLH', 1, 18.3150, 105.8750),
+    (44, 4, N'Xã Thạch Đài', 'HT-TD', 1, 18.3350, 105.8600),
+    (45, 4, N'Xã Thạch Hải', 'HT-THAI', 1, 18.3850, 105.9600),
+    (46, 4, N'Xã Thạch Trị', 'HT-TTRI', 1, 18.3200, 106.0100),
+    (47, 4, N'Xã Thạch Văn', 'HT-TV', 1, 18.3050, 106.0250),
+    (48, 4, N'Xã Thạch Thắng', 'HT-TTH', 1, 18.3300, 105.9700),
+    (49, 4, N'Xã Thạch Hội', 'HT-THOI', 1, 18.3100, 105.9900),
+    (50, 4, N'Xã Tượng Sơn', 'HT-TSN', 1, 18.3250, 105.9500),
+    (51, 4, N'Xã Đỉnh Bàn', 'HT-DB', 1, 18.4100, 105.9300),
+    (52, 4, N'Xã Hộ Độ', 'HT-HD', 1, 18.3950, 105.9050),
+    (53, 4, N'Xã Cẩm Vịnh', 'HT-CV', 1, 18.2950, 105.9100),
+    (54, 4, N'Xã Thạch Bình', 'HT-TB', 1, 18.3100, 105.9200),
+    (55, 4, N'Xã Lưu Vĩnh Sơn', 'HT-LVS', 1, 18.3000, 105.8200),
+    (56, 4, N'Xã Việt Tiến', 'HT-VT', 1, 18.3800, 105.8300),
+    (57, 4, N'Xã Thạch Châu', 'HT-TC', 1, 18.4400, 105.8800),
+    (58, 4, N'Xã Thạch Kim', 'HT-TKIM', 1, 18.4600, 105.8900),
+    (59, 4, N'Xã Thịnh Lộc', 'HT-TLOC', 1, 18.4800, 105.8700),
+    (60, 4, N'Xã Mai Phụ', 'HT-MP', 1, 18.4200, 105.8600),
+    (61, 4, N'Xã Nam Phúc Thăng', 'HT-NPT', 1, 18.2400, 105.9600),
+    (62, 4, N'Xã Yên Hòa', 'HT-YH', 1, 18.2200, 106.0200),
+    (63, 4, N'Xã Kim Song Trường', 'HT-KST', 1, 18.4500, 105.7500),
+    (64, 4, N'Xã Khánh Vĩnh Yên', 'HT-KVY', 1, 18.4800, 105.6800)
 ) AS source (MaPhuongXa, MaQuanHuyen, TenPhuongXa, MaHanhChinh, TrangThai, ViDo, KinhDo)
 ON target.MaPhuongXa = source.MaPhuongXa
 WHEN MATCHED THEN
