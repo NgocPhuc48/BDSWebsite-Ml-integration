@@ -80,6 +80,8 @@ public class HomeController : Controller
                     : t.MaBdsNavigation.DiaChiMoTa ?? "",
                 ViDo = t.MaBdsNavigation.ViDo,
                 KinhDo = t.MaBdsNavigation.KinhDo,
+                HinhAnh = t.DanhSachAnhDatDai,
+                AnhDaiDien = t.DanhSachAnhDatDai,
                 NgayDang = t.NgayDang
             }).ToListAsync();
 
@@ -127,17 +129,13 @@ public class HomeController : Controller
         int? maLoaiBds, string? loaiGiaoDich, decimal? giaTu, decimal? giaDen,
         int? maTinh, int? maQuanHuyen, int? maPhuongXa, string? tuKhoa)
     {
+        // 1. Lấy tất cả tin đã duyệt (APPROVED) cùng điều kiện với danh sách tin
         var query = _context.TinDangs
             .Include(t => t.MaBdsNavigation)
                 .ThenInclude(b => b!.MaPhuongXaNavigation)
-            .Where(t => t.TrangThai == "APPROVED" && t.MaBdsNavigation != null && t.MaBdsNavigation.ViDo.HasValue && t.MaBdsNavigation.KinhDo.HasValue)
+                    .ThenInclude(p => p!.MaQuanHuyenNavigation)
+            .Where(t => t.TrangThai == "APPROVED" && t.MaBdsNavigation != null)
             .AsQueryable();
-
-        if (minLat.HasValue && maxLat.HasValue && minLng.HasValue && maxLng.HasValue)
-        {
-            query = query.Where(t => t.MaBdsNavigation!.ViDo >= minLat && t.MaBdsNavigation.ViDo <= maxLat &&
-                                     t.MaBdsNavigation.KinhDo >= minLng && t.MaBdsNavigation.KinhDo <= maxLng);
-        }
 
         if (!string.IsNullOrEmpty(loaiGiaoDich)) query = query.Where(t => t.LoaiGiaoDich == loaiGiaoDich);
         if (maLoaiBds.HasValue && maLoaiBds > 0) query = query.Where(t => t.MaBdsNavigation!.MaLoaiBds == maLoaiBds);
@@ -165,16 +163,100 @@ public class HomeController : Controller
             query = query.Where(t => t.TieuDe!.ToLower().Contains(kw) || (t.MoTa != null && t.MoTa.ToLower().Contains(kw)));
         }
 
-        var pins = await query.Take(100).Select(t => new MapLocationDto
+        var tinList = await query
+            .OrderByDescending(t => t.NgayDang)
+            .Take(100)
+            .ToListAsync();
+
+        // 2. Tọa độ mặc định trung tâm (TP Vinh, Nghệ An)
+        const decimal baseDefaultLat = 18.6738m;
+        const decimal baseDefaultLng = 105.6925m;
+
+        // Bảng tọa độ trung tâm tham chiếu cho các Huyện/Thị xã ở Nghệ An nếu có
+        var quanHuyenCoords = new Dictionary<string, (decimal Lat, decimal Lng)>(StringComparer.OrdinalIgnoreCase)
         {
-            MaTin = t.MaTin,
-            TieuDe = t.TieuDe ?? "BĐS",
-            GiaRaoVnd = t.GiaRaoVnd,
-            DienTichDat = t.MaBdsNavigation!.DienTichDat,
-            ViDo = t.MaBdsNavigation.ViDo!.Value,
-            KinhDo = t.MaBdsNavigation.KinhDo!.Value,
-            DiaChi = t.MaBdsNavigation.DiaChiMoTa ?? (t.MaBdsNavigation.MaPhuongXaNavigation != null ? t.MaBdsNavigation.MaPhuongXaNavigation.TenPhuongXa! : "")
-        }).ToListAsync();
+            { "Thành phố Vinh", (18.6738m, 105.6925m) },
+            { "Thị xã Cửa Lò", (18.8012m, 105.7130m) },
+            { "Thị xã Thái Hòa", (19.3241m, 105.4389m) },
+            { "Thị xã Hoàng Mai", (19.2483m, 105.7061m) },
+            { "Huyện Nghi Lộc", (18.7833m, 105.5833m) },
+            { "Huyện Diễn Châu", (18.9833m, 105.5833m) },
+            { "Huyện Hưng Nguyên", (18.6833m, 105.6167m) },
+            { "Huyện Nam Đàn", (18.7000m, 105.4667m) }
+        };
+
+        var pins = new List<MapLocationDto>();
+
+        foreach (var t in tinList)
+        {
+            var bds = t.MaBdsNavigation;
+            if (bds == null) continue;
+
+            decimal viDo;
+            decimal kinhDo;
+
+            // Kiểm tra tọa độ có hợp lệ không (> 0 và nằm trong vùng Việt Nam)
+            if (bds.ViDo.HasValue && bds.ViDo.Value > 8m && bds.ViDo.Value < 24m &&
+                bds.KinhDo.HasValue && bds.KinhDo.Value > 100m && bds.KinhDo.Value < 112m)
+            {
+                viDo = bds.ViDo.Value;
+                kinhDo = bds.KinhDo.Value;
+            }
+            else
+            {
+                // Tự động gán tọa độ theo Quận/Huyện hoặc Phường/Xã nếu chưa có
+                string? tenQuan = bds.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.TenQuanHuyen;
+                decimal centerLat = baseDefaultLat;
+                decimal centerLng = baseDefaultLng;
+
+                if (!string.IsNullOrEmpty(tenQuan))
+                {
+                    foreach (var kvp in quanHuyenCoords)
+                    {
+                        if (tenQuan.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase) || kvp.Key.Contains(tenQuan, StringComparison.OrdinalIgnoreCase))
+                        {
+                            centerLat = kvp.Value.Lat;
+                            centerLng = kvp.Value.Lng;
+                            break;
+                        }
+                    }
+                }
+
+                // Thêm độ lệch ngẫu nhiên cực nhỏ (~0.001 - 0.004 độ) dựa trên MaTin để các ghim không bị đè khít lên nhau
+                int hash = (int)(t.MaTin % 100);
+                double angle = (hash * 36.0) * Math.PI / 180.0;
+                double radius = 0.0015 + ((hash % 5) * 0.0006);
+
+                viDo = Math.Round(centerLat + (decimal)(radius * Math.Cos(angle)), 6);
+                kinhDo = Math.Round(centerLng + (decimal)(radius * Math.Sin(angle)), 6);
+            }
+
+            // Nếu người dùng đang pan/zoom bản đồ và truyền bounds, lọc theo bounds
+            if (minLat.HasValue && maxLat.HasValue && minLng.HasValue && maxLng.HasValue)
+            {
+                if (viDo < minLat.Value || viDo > maxLat.Value || kinhDo < minLng.Value || kinhDo > maxLng.Value)
+                {
+                    continue;
+                }
+            }
+
+            string diaChi = bds.DiaChiMoTa ?? "";
+            if (string.IsNullOrWhiteSpace(diaChi) && bds.MaPhuongXaNavigation != null)
+            {
+                diaChi = $"{bds.MaPhuongXaNavigation.TenPhuongXa}, {bds.MaPhuongXaNavigation.MaQuanHuyenNavigation?.TenQuanHuyen}";
+            }
+
+            pins.Add(new MapLocationDto
+            {
+                MaTin = t.MaTin,
+                TieuDe = t.TieuDe ?? "BĐS",
+                GiaRaoVnd = t.GiaRaoVnd,
+                DienTichDat = bds.DienTichDat,
+                ViDo = viDo,
+                KinhDo = kinhDo,
+                DiaChi = diaChi
+            });
+        }
 
         return Json(pins);
     }

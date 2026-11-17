@@ -85,10 +85,10 @@
                 <label class="form-label small fw-bold text-muted mb-1">Loại giao dịch</label>
                 <select name="loaiGiaoDich" class="form-select shadow-sm">
                     <option value="ALL" selected="@(currentLoai == "ALL")">-- Tất cả loại GD --</option>
-                    <option value="NAP_DIEM" selected="@(currentLoai == "NAP_DIEM")">Nạp điểm (Cộng)</option>
-                    <option value="TRU_DIEM" selected="@(currentLoai == "TRU_DIEM")">Trừ điểm dịch vụ</option>
+                    <option value="NAP_TIEN_QR" selected="@(currentLoai == "NAP_TIEN_QR")">Nạp tiền bằng QR</option>
+                    <option value="NAP_DIEM" selected="@(currentLoai == "NAP_DIEM")">Nạp điểm thủ công</option>
+                    <option value="TRU_DIEM" selected="@(currentLoai == "TRU_DIEM")">Trừ điểm / Cọc bẫy giá</option>
                     <option value="HOAN_COC" selected="@(currentLoai == "HOAN_COC")">Hoàn tiền cọc bẫy giá</option>
-                    <option value="TRU_COC" selected="@(currentLoai == "TRU_COC")">Đặt cọc bẫy giá</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -133,7 +133,7 @@
                     {
                         foreach (var item in Model)
                         {
-                            var isPlus = item.LoaiGiaoDich == "NAP_DIEM" || item.LoaiGiaoDich == "HOAN_COC";
+                            var isPlus = item.LoaiGiaoDich == "NAP_DIEM" || item.LoaiGiaoDich == "NAP_TIEN_QR" || item.LoaiGiaoDich == "HOAN_COC" || item.LoaiGiaoDich == "HOAN_TIEN_COC";
                             <tr id="row-@item.MaGiaoDich">
                                 <td><strong>#@item.MaGiaoDich</strong></td>
                                 <td>
@@ -143,26 +143,32 @@
                                 <td>
                                     @switch (item.LoaiGiaoDich)
                                     {
+                                        case "NAP_TIEN_QR":
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-qr-code me-1"></i>Nạp tiền QR</span>
+                                            break;
                                         case "NAP_DIEM":
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-plus-lg me-1"></i>Nạp điểm</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-plus-lg me-1"></i>Nạp điểm Admin</span>
                                             break;
                                         case "HOAN_COC":
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-arrow-return-left me-1"></i>Hoàn cọc</span>
+                                        case "HOAN_TIEN_COC":
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-arrow-return-left me-1"></i>Hoàn cọc bẫy giá</span>
                                             break;
+                                        case "TRU_DIEM":
+                                        case "TAM_GIU_COC":
                                         case "TRU_COC":
-                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-lock me-1"></i>Cọc bẫy giá</span>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-dash-lg me-1"></i>Trừ điểm (Cọc bẫy giá)</span>
                                             break;
                                         default:
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-dash-lg me-1"></i>Trừ điểm</span>
+                                            <span class="badge bg-secondary-subtle text-secondary border">@(item.LoaiGiaoDich ?? "Khác")</span>
                                             break;
                                     }
                                 </td>
                                 <td>
                                     <span class="fw-bold @(isPlus ? "text-success" : "text-danger")">
-                                        @(isPlus ? "+" : "-")@string.Format("{0:N0}", item.SoDiem)
+                                        @(isPlus ? "+" : "-")@string.Format("{0:N0} đ", item.SoDiem)
                                     </span>
                                 </td>
-                                <td><span class="fw-semibold text-dark">@string.Format("{0:N0}", item.SoDuSauGiaoDich)</span></td>
+                                <td><span class="fw-semibold text-dark">@string.Format("{0:N0} đ", item.SoDuSauGiaoDich)</span></td>
                                 <td><small class="text-muted text-truncate d-inline-block" style="max-width: 250px;">@(item.MoTa ?? "---")</small></td>
                                 <td><small class="text-muted">@item.NgayTao?.ToString("dd/MM/yyyy HH:mm")</small></td>
                                 <td class="text-end">
@@ -366,26 +372,38 @@
                 if (result.success) {
                     const data = result.data;
                     document.getElementById('detailMaGiaoDich').innerText = `#${data.maGiaoDich}`;
-                    document.getElementById('detailKhachHang').innerText = data.maViNavigation?.maNguoiDungNavigation?.hoTen || 'N/A';
-                    document.getElementById('detailEmail').innerText = data.maViNavigation?.maNguoiDungNavigation?.email || 'N/A';
-                    document.getElementById('detailLoaiGiaoDich').innerText = data.loaiGiaoDich || 'N/A';
+                    document.getElementById('detailKhachHang').innerText = data.tenKhachHang || 'N/A';
+                    document.getElementById('detailEmail').innerText = `${data.emailKhachHang || '---'} (SĐT: ${data.sdtKhachHang || '---'})`;
+                    
+                    let loaiText = data.loaiGiaoDich;
+                    if (data.loaiGiaoDich === 'NAP_TIEN_QR') loaiText = 'Nạp tiền bằng VietQR';
+                    else if (data.loaiGiaoDich === 'NAP_DIEM') loaiText = 'Nạp điểm (Admin cộng)';
+                    else if (data.loaiGiaoDich === 'TRU_DIEM' || data.loaiGiaoDich === 'TAM_GIU_COC' || data.loaiGiaoDich === 'TRU_COC') loaiText = 'Trừ điểm (Cọc bẫy giá)';
+                    else if (data.loaiGiaoDich === 'HOAN_COC' || data.loaiGiaoDich === 'HOAN_TIEN_COC') loaiText = 'Hoàn cọc bẫy giá';
 
-                    const isPlus = data.loaiGiaoDich === 'NAP_DIEM' || data.loaiGiaoDich === 'HOAN_COC';
+                    document.getElementById('detailLoaiGiaoDich').innerText = loaiText;
+
+                    const isPlus = data.loaiGiaoDich === 'NAP_DIEM' || data.loaiGiaoDich === 'NAP_TIEN_QR' || data.loaiGiaoDich === 'HOAN_COC' || data.loaiGiaoDich === 'HOAN_TIEN_COC';
                     const sign = isPlus ? '+' : '-';
                     const colorClass = isPlus ? 'text-success' : 'text-danger';
 
                     const soDiemElem = document.getElementById('detailSoDiem');
-                    soDiemElem.innerText = `${sign}${data.soDiem ? data.soDiem.toLocaleString('vi-VN') : 0} điểm`;
+                    soDiemElem.innerText = `${sign}${data.soDiem ? data.soDiem.toLocaleString('vi-VN') : 0} đ`;
                     soDiemElem.className = `fw-bold ${colorClass}`;
 
-                    document.getElementById('detailSoDuSau').innerText = `${data.soDuSauGiaoDich ? data.soDuSauGiaoDich.toLocaleString('vi-VN') : 0} điểm`;
-                    document.getElementById('detailThoiGian').innerText = new Date(data.ngayTao).toLocaleString('vi-VN');
+                    document.getElementById('detailSoDuSau').innerText = `${data.soDuSauGiaoDich ? data.soDuSauGiaoDich.toLocaleString('vi-VN') : 0} đ`;
+                    document.getElementById('detailThoiGian').innerText = data.ngayTaoHienThi || (data.ngayTao ? new Date(data.ngayTao).toLocaleString('vi-VN') : '---');
                     document.getElementById('detailMoTa').innerText = data.moTa || 'Không có mô tả';
 
                     detailModal.show();
                 } else {
                     alert(result.message);
                 }
+            } catch (e) {
+                console.error("Lỗi khi tải chi tiết giao dịch:", e);
+                alert('Có lỗi khi tải dữ liệu giao dịch!');
+            }
+        }
             } catch (e) {
                 alert('Có lỗi khi tải dữ liệu giao dịch!');
             }

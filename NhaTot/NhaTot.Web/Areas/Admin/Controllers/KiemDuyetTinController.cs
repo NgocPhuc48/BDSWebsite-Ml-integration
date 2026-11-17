@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
@@ -22,6 +22,8 @@ public class KiemDuyetTinController : Controller
         ViewBag.CurrentStatus = trangThai;
 
         var query = _context.TinDangs
+            .Include(t => t.MaBdsNavigation)
+                .ThenInclude(b => b!.MaLoaiBdsNavigation)
             .Include(t => t.MaBdsNavigation)
                 .ThenInclude(b => b!.MaPhuongXaNavigation)
             .Include(t => t.MaNguoiDangNavigation)
@@ -52,6 +54,8 @@ public async Task<IActionResult> GetDetail(long id)
             .Include(t => t.MaNguoiDangNavigation)
             .Include(t => t.MaNguoiDuyetNavigation)
             .Include(t => t.MaBdsNavigation)
+                .ThenInclude(b => b!.MaLoaiBdsNavigation)
+            .Include(t => t.MaBdsNavigation)
                 .ThenInclude(b => b!.MaPhuongXaNavigation)
                     .ThenInclude(p => p!.MaQuanHuyenNavigation)
             .Include(t => t.MaBdsNavigation)
@@ -61,11 +65,13 @@ public async Task<IActionResult> GetDetail(long id)
             .FirstOrDefaultAsync(t => t.MaTin == id);
 
         if (item == null)
-            return Json(new { success = false, message = "KhÃ´ng tÃ¬m tháº¥y tin Ä‘Äƒng trong há»‡ thá»‘ng!" });
+            return Json(new { success = false, message = "Không tìm thấy tin đăng trong hệ thống!" });
 
         var bds = item.MaBdsNavigation;
         var chiTietNha = bds?.ChiTietNhas?.FirstOrDefault();
         var chiTietDat = bds?.ChiTietDats?.FirstOrDefault();
+        string tenLoai = bds?.MaLoaiBdsNavigation?.TenLoaiBds ?? "";
+        bool isDat = tenLoai.Contains("Đất", StringComparison.OrdinalIgnoreCase) || chiTietDat != null;
 
         return Json(new
         {
@@ -73,13 +79,15 @@ public async Task<IActionResult> GetDetail(long id)
             data = new
             {
                 maTin = item.MaTin,
-                tieuDe = item.TieuDe ?? "KhÃ´ng cÃ³ tiÃªu Ä‘á»",
-                moTa = item.MoTa ?? "KhÃ´ng cÃ³ mÃ´ táº£ chi tiáº¿t.",
+                tieuDe = item.TieuDe ?? "Không có tiêu đề",
+                moTa = item.MoTa ?? "Không có mô tả chi tiết.",
                 giaRaoVnd = item.GiaRaoVnd,
                 loaiGiaoDich = item.LoaiGiaoDich ?? "BAN",
                 trangThai = item.TrangThai ?? "PENDING",
                 ngayDang = item.NgayDang?.ToString("dd/MM/yyyy HH:mm") ?? "---",
                 lyDoTuChoi = item.LyDoTuChoi ?? "",
+                danhSachAnhDatDai = item.DanhSachAnhDatDai,
+                danhSachAnhSoDoSoHong = item.DanhSachAnhSoDoSoHong,
 
                 nguoiDang = new
                 {
@@ -90,6 +98,9 @@ public async Task<IActionResult> GetDetail(long id)
 
                 bds = bds == null ? null : new
                 {
+                    tenLoaiBds = tenLoai,
+                    isDat = isDat,
+                    tenDuAn = bds.TenDuAn ?? "",
                     diaChiMoTa = bds.DiaChiMoTa ?? "",
                     tenPhuongXa = bds.MaPhuongXaNavigation?.TenPhuongXa ?? "",
                     tenQuanHuyen = bds.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.TenQuanHuyen ?? "",
@@ -97,11 +108,26 @@ public async Task<IActionResult> GetDetail(long id)
                     dienTichSuDung = bds.DienTichSuDung ?? 0,
                     huong = bds.Huong ?? "---",
                     phapLy = bds.PhapLy ?? "---",
+                    viDo = bds.ViDo,
+                    kinhDo = bds.KinhDo,
 
+                    // Chi tiết Nhà
+                    hasNha = chiTietNha != null,
                     soTang = chiTietNha?.SoTang ?? 0,
                     soPhongNgu = chiTietNha?.SoPhongNgu ?? 0,
                     soWc = chiTietNha?.SoWc ?? 0,
-                    noiThat = chiTietNha?.NoiThat ?? "---"
+                    namXayDung = chiTietNha?.NamXayDung,
+                    tinhTrangNha = chiTietNha?.TinhTrangNha ?? "---",
+                    noiThat = chiTietNha?.NoiThat ?? "---",
+
+                    // Chi tiết Đất
+                    hasDat = chiTietDat != null,
+                    loaiDat = chiTietDat?.LoaiDat ?? "---",
+                    matTienM = chiTietDat?.MatTienM,
+                    chieuSauM = chiTietDat?.ChieuSauM,
+                    loaiDuong = chiTietDat?.LoaiDuong ?? "---",
+                    doRongDuongM = chiTietDat?.DoRongDuongM,
+                    hinhDang = chiTietDat?.HinhDang ?? "---"
                 }
             }
         });

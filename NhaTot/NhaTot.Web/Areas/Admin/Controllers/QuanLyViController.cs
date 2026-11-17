@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
@@ -28,13 +28,13 @@ public class QuanLyViController : Controller
         ViewBag.TongSoDuHeThong = await _context.ViTaiKhoans.SumAsync(v => (decimal?)v.SoDuDiem) ?? 0;
         ViewBag.TongViHoatDong = await _context.ViTaiKhoans.CountAsync(v => v.TrangThai == "ACTIVE");
 
-        // Tá»•ng Ä‘iá»ƒm náº¡p & trá»« tá»« lá»‹ch sá»­ giao dá»‹ch
+        // Tổng điểm nạp & trừ từ lịch sử giao dịch
         ViewBag.TongDiemNap = await _context.LichSuGiaoDiches
-            .Where(g => g.LoaiGiaoDich == "NAP_DIEM")
+            .Where(g => g.LoaiGiaoDich == "NAP_DIEM" || g.LoaiGiaoDich == "NAP_TIEN_QR")
             .SumAsync(g => (decimal?)g.SoDiem) ?? 0;
 
         ViewBag.TongDiemHoanCoc = await _context.LichSuGiaoDiches
-            .Where(g => g.LoaiGiaoDich == "HOAN_COC")
+            .Where(g => g.LoaiGiaoDich == "HOAN_COC" || g.LoaiGiaoDich == "HOAN_TIEN_COC")
             .SumAsync(g => (decimal?)g.SoDiem) ?? 0;
 
         // Truy váº¥n lá»‹ch sá»­ giao dá»‹ch
@@ -82,7 +82,7 @@ public class QuanLyViController : Controller
         return View(list);
     }
 
-    // GET: Admin/QuanLyVi/GetDetail/5 (Chi tiáº¿t giao dá»‹ch)
+    // GET: Admin/QuanLyVi/GetDetail/5 (Chi tiết giao dịch)
     [HttpGet]
     public async Task<IActionResult> GetDetail(long id)
     {
@@ -92,9 +92,26 @@ public class QuanLyViController : Controller
             .FirstOrDefaultAsync(g => g.MaGiaoDich == id);
 
         if (item == null)
-            return Json(new { success = false, message = "KhÃ´ng tÃ¬m tháº¥y giao dá»‹ch!" });
+            return Json(new { success = false, message = "Không tìm thấy giao dịch!" });
 
-        return Json(new { success = true, data = item });
+        return Json(new
+        {
+            success = true,
+            data = new
+            {
+                maGiaoDich = item.MaGiaoDich,
+                maVi = item.MaVi,
+                loaiGiaoDich = item.LoaiGiaoDich,
+                soDiem = item.SoDiem,
+                soDuSauGiaoDich = item.SoDuSauGiaoDich,
+                moTa = item.MoTa,
+                ngayTao = item.NgayTao?.ToString("yyyy-MM-ddTHH:mm:ss"),
+                ngayTaoHienThi = item.NgayTao?.ToString("dd/MM/yyyy HH:mm"),
+                tenKhachHang = item.MaViNavigation?.MaNguoiDungNavigation?.HoTen ?? "Người dùng #" + item.MaViNavigation?.MaNguoiDung,
+                emailKhachHang = item.MaViNavigation?.MaNguoiDungNavigation?.Email ?? "---",
+                sdtKhachHang = item.MaViNavigation?.MaNguoiDungNavigation?.SoDienThoai ?? "---"
+            }
+        });
     }
 
     // POST: Admin/QuanLyVi/AdjustBalance (Cá»™ng / Trá»« Ä‘iá»ƒm thá»§ cÃ´ng bá»Ÿi Admin)

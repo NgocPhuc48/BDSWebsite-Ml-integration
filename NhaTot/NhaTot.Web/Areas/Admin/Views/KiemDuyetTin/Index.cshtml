@@ -172,6 +172,10 @@
                 <!-- Thông tin Bất động sản -->
                 <div class="mb-3">
                     <h6 class="fw-bold text-primary border-bottom pb-2"><i class="bi bi-geo-alt me-2"></i>Thông tin Bất động sản</h6>
+                    <div class="row g-2 mb-2 text-dark">
+                        <div class="col-md-6"><strong>Loại BĐS:</strong> <span id="detailTenLoaiBds" class="badge bg-primary-subtle text-primary border"></span></div>
+                        <div class="col-md-6"><strong>Tên dự án:</strong> <span id="detailTenDuAn"></span></div>
+                    </div>
                     <p class="mb-2"><strong>Địa chỉ:</strong> <span id="detailDiaChi"></span></p>
                     <div class="row g-2 mb-2 text-dark">
                         <div class="col-md-3"><strong>Diện tích đất:</strong> <span id="detailDienTichDat"></span> m²</div>
@@ -179,11 +183,42 @@
                         <div class="col-md-3"><strong>Hướng:</strong> <span id="detailHuong"></span></div>
                         <div class="col-md-3"><strong>Pháp lý:</strong> <span id="detailPhapLy"></span></div>
                     </div>
-                    <div id="boxChiTietNha" class="row g-2 bg-body-tertiary p-2 rounded mb-2 d-none text-dark">
-                        <div class="col-md-3"><strong>Số tầng:</strong> <span id="detailSoTang"></span></div>
-                        <div class="col-md-3"><strong>Phòng ngủ:</strong> <span id="detailSoPhongNgu"></span></div>
-                        <div class="col-md-3"><strong>Phòng WC:</strong> <span id="detailSoWc"></span></div>
-                        <div class="col-md-3"><strong>Nội thất:</strong> <span id="detailNoiThat"></span></div>
+
+                    <!-- Phân hệ Chi tiết Nhà ở -->
+                    <div id="boxChiTietNha" class="p-3 bg-light rounded mb-2 border border-info-subtle d-none">
+                        <h6 class="fw-bold text-info mb-2"><i class="bi bi-house-door me-1"></i>Chi tiết phân hệ Nhà ở</h6>
+                        <div class="row g-2 text-dark">
+                            <div class="col-md-3"><strong>Số tầng:</strong> <span id="detailSoTang"></span></div>
+                            <div class="col-md-3"><strong>Phòng ngủ:</strong> <span id="detailSoPhongNgu"></span></div>
+                            <div class="col-md-3"><strong>Phòng WC:</strong> <span id="detailSoWc"></span></div>
+                            <div class="col-md-3"><strong>Năm xây dựng:</strong> <span id="detailNamXayDung"></span></div>
+                            <div class="col-md-6"><strong>Tình trạng nhà:</strong> <span id="detailTinhTrangNha"></span></div>
+                            <div class="col-md-6"><strong>Nội thất:</strong> <span id="detailNoiThat"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Phân hệ Chi tiết Đất -->
+                    <div id="boxChiTietDat" class="p-3 bg-light rounded mb-2 border border-success-subtle d-none">
+                        <h6 class="fw-bold text-success mb-2"><i class="bi bi-bounding-box me-1"></i>Chi tiết phân hệ Đất</h6>
+                        <div class="row g-2 text-dark">
+                            <div class="col-md-4"><strong>Loại đất:</strong> <span id="detailLoaiDat"></span></div>
+                            <div class="col-md-4"><strong>Mặt tiền:</strong> <span id="detailMatTienM"></span> m</div>
+                            <div class="col-md-4"><strong>Chiều sâu:</strong> <span id="detailChieuSauM"></span> m</div>
+                            <div class="col-md-4"><strong>Loại đường:</strong> <span id="detailLoaiDuong"></span></div>
+                            <div class="col-md-4"><strong>Độ rộng đường:</strong> <span id="detailDoRongDuongM"></span> m</div>
+                            <div class="col-md-4"><strong>Hình dáng:</strong> <span id="detailHinhDang"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Tọa độ bản đồ -->
+                    <div id="boxToaDo" class="p-2 bg-body-tertiary rounded mb-2 d-none">
+                        <small class="text-muted"><i class="bi bi-pin-map me-1 text-danger"></i><strong>Tọa độ:</strong> Vĩ độ: <span id="detailViDo"></span>, Kinh độ: <span id="detailKinhDo"></span></small>
+                    </div>
+
+                    <!-- Hình ảnh đính kèm & Sổ đỏ -->
+                    <div id="boxHinhAnh" class="mt-3 d-none">
+                        <h6 class="fw-bold text-secondary mb-2"><i class="bi bi-images me-1"></i>Hình ảnh đính kèm & Sổ đỏ/Sổ hồng</h6>
+                        <div id="detailGallery" class="d-flex flex-wrap gap-2"></div>
                     </div>
                 </div>
 
@@ -276,6 +311,8 @@
 
                     // Bất động sản
                     if (d.bds) {
+                        setTxt('detailTenLoaiBds', d.bds.tenLoaiBds || 'Bất động sản');
+                        setTxt('detailTenDuAn', d.bds.tenDuAn || '---');
                         const fullAddress = [d.bds.diaChiMoTa, d.bds.tenPhuongXa, d.bds.tenQuanHuyen].filter(Boolean).join(', ');
                         setTxt('detailDiaChi', fullAddress || 'Chưa cập nhật');
                         setTxt('detailDienTichDat', d.bds.dienTichDat);
@@ -283,17 +320,101 @@
                         setTxt('detailHuong', d.bds.huong);
                         setTxt('detailPhapLy', d.bds.phapLy);
 
+                        // Phân hệ Nhà ở
                         const boxNha = document.getElementById('boxChiTietNha');
                         if (boxNha) {
-                            if (d.bds.soTang > 0 || d.bds.soPhongNgu > 0) {
+                            if (d.bds.hasNha || d.bds.soTang > 0 || d.bds.soPhongNgu > 0) {
                                 boxNha.classList.remove('d-none');
                                 setTxt('detailSoTang', d.bds.soTang);
                                 setTxt('detailSoPhongNgu', d.bds.soPhongNgu);
                                 setTxt('detailSoWc', d.bds.soWc);
+                                setTxt('detailNamXayDung', d.bds.namXayDung || '---');
+                                setTxt('detailTinhTrangNha', d.bds.tinhTrangNha);
                                 setTxt('detailNoiThat', d.bds.noiThat);
                             } else {
                                 boxNha.classList.add('d-none');
                             }
+                        }
+
+                        // Phân hệ Đất
+                        const boxDat = document.getElementById('boxChiTietDat');
+                        if (boxDat) {
+                            if (d.bds.hasDat || d.bds.isDat) {
+                                boxDat.classList.remove('d-none');
+                                setTxt('detailLoaiDat', d.bds.loaiDat);
+                                setTxt('detailMatTienM', d.bds.matTienM);
+                                setTxt('detailChieuSauM', d.bds.chieuSauM);
+                                setTxt('detailLoaiDuong', d.bds.loaiDuong);
+                                setTxt('detailDoRongDuongM', d.bds.doRongDuongM);
+                                setTxt('detailHinhDang', d.bds.hinhDang);
+                            } else {
+                                boxDat.classList.add('d-none');
+                            }
+                        }
+
+                        // Tọa độ
+                        const boxToaDo = document.getElementById('boxToaDo');
+                        if (boxToaDo) {
+                            if (d.bds.viDo && d.bds.kinhDo) {
+                                boxToaDo.classList.remove('d-none');
+                                setTxt('detailViDo', d.bds.viDo);
+                                setTxt('detailKinhDo', d.bds.kinhDo);
+                            } else {
+                                boxToaDo.classList.add('d-none');
+                            }
+                        }
+                    }
+
+                    // Hình ảnh & Sổ đỏ
+                    const boxHinhAnh = document.getElementById('boxHinhAnh');
+                    const gallery = document.getElementById('detailGallery');
+                    if (boxHinhAnh && gallery) {
+                        gallery.innerHTML = '';
+                        let allImgs = [];
+                        
+                        function parseImages(str, tag) {
+                            if (!str) return [];
+                            str = str.trim();
+                            let arr = [];
+                            if (str.startsWith('[') && str.endsWith(']')) {
+                                try { arr = JSON.parse(str); } catch { }
+                            }
+                            if (arr.length === 0) {
+                                arr = str.split(/[,;|\n\r]+/).map(s => s.trim()).filter(Boolean);
+                            }
+                            return arr.map(url => ({ url, tag }));
+                        }
+
+                        allImgs.push(...parseImages(d.danhSachAnhDatDai, 'Ảnh BĐS'));
+                        allImgs.push(...parseImages(d.danhSachAnhSoDoSoHong, 'Sổ đỏ/hồng'));
+
+                        if (allImgs.length > 0) {
+                            boxHinhAnh.classList.remove('d-none');
+                            allImgs.forEach(item => {
+                                const wrapper = document.createElement('div');
+                                wrapper.className = 'position-relative border rounded overflow-hidden shadow-sm';
+                                wrapper.style.width = '110px';
+                                wrapper.style.height = '85px';
+
+                                const img = document.createElement('img');
+                                img.src = item.url;
+                                img.className = 'w-100 h-100 object-fit-cover';
+                                img.alt = item.tag;
+                                img.style.cursor = 'pointer';
+                                img.onclick = () => window.open(item.url, '_blank');
+                                img.onerror = function() { this.src = 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=600&q=80'; };
+
+                                const badge = document.createElement('span');
+                                badge.className = `position-absolute bottom-0 start-0 w-100 text-center small text-white ${item.tag.includes('Sổ') ? 'bg-danger' : 'bg-dark'} bg-opacity-75 py-0 px-1`;
+                                badge.style.fontSize = '0.7rem';
+                                badge.textContent = item.tag;
+
+                                wrapper.appendChild(img);
+                                wrapper.appendChild(badge);
+                                gallery.appendChild(wrapper);
+                            });
+                        } else {
+                            boxHinhAnh.classList.add('d-none');
                         }
                     }
 

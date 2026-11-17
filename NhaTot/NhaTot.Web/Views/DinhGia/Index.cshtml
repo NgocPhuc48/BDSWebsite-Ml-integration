@@ -1,86 +1,212 @@
 @model NhaTot.Web.Models.DinhGiaInputModel
 @{
-    ViewData["Title"] = "Công cụ Định giá Bất động sản bằng AI";
+    ViewData["Title"] = "Định giá & Dự báo giá BĐS 6 tháng tới bằng AI";
 }
 
 <div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="m-0 fw-bold"><i class="bi bi-cpu-fill me-2"></i>Định giá Bất động sản AI</h4>
+        <div class="col-lg-10">
+            <!-- Header card -->
+            <div class="card shadow border-0 rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="m-0 fw-bold"><i class="bi bi-cpu-fill me-2"></i>Định giá & Dự báo xu hướng giá BĐS</h4>
+                        <small class="text-white-50">Ứng dụng thuật toán AI Machine Learning kết hợp dữ liệu thị trường thực tế</small>
+                    </div>
+                    <span class="badge bg-warning text-dark px-3 py-2 fw-semibold">
+                        <i class="bi bi-graph-up-arrow me-1"></i>Dự báo 6 tháng tới
+                    </span>
                 </div>
-                <div class="card-body">
+                
+                <div class="card-body p-4 bg-white">
                     <form id="formDinhGia">
-                        <div class="row g-3">
+                        <!-- 1. THÔNG TIN CHUNG (LUÔN HIỆN) -->
+                        <h5 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-info-circle me-1"></i> Thông tin cơ bản bất động sản
+                        </h5>
+                        <div class="row g-3 mb-4">
+                            <!-- Loại BĐS -->
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold">Loại BĐS</label>
+                                <label class="form-label fw-bold">Loại BĐS <span class="text-danger">*</span></label>
                                 <select id="MaLoaiBds" class="form-select" required>
                                     <option value="">-- Chọn loại BĐS --</option>
-                                    @foreach (var loai in ViewBag.DanhSachLoaiBds)
+                                    @if (ViewBag.DanhSachLoaiBds != null)
                                     {
-                                        <option value="@loai.MaLoaiBds">@loai.TenLoaiBds</option>
+                                        foreach (var loai in ViewBag.DanhSachLoaiBds)
+                                        {
+                                            <option value="@loai.MaLoaiBds">@loai.TenLoaiBds</option>
+                                        }
                                     }
                                 </select>
                             </div>
 
+                            <!-- Tỉnh / Thành -->
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold">Phường/Xã</label>
-                                <input type="number" id="MaPhuongXa" class="form-control" placeholder="Mã Phường/Xã (ví dụ: 101)" required />
+                                <label class="form-label fw-bold">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                                <select id="ddlTinhThanh" class="form-select" required>
+                                    <option value="">-- Chọn Tỉnh/Thành --</option>
+                                    @if (ViewBag.DanhSachTinhThanh != null)
+                                    {
+                                        foreach (var t in ViewBag.DanhSachTinhThanh)
+                                        {
+                                            <option value="@t.MaTinh" selected="@(t.MaTinh == 1)">@t.TenTinh</option>
+                                        }
+                                    }
+                                </select>
                             </div>
 
+                            <!-- Quận / Huyện -->
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold">Diện tích đất (m²)</label>
-                                <input type="number" step="0.1" id="DienTichDat" class="form-control" placeholder="Ví dụ: 85.5" required />
+                                <label class="form-label fw-bold">Quận / Huyện</label>
+                                <select id="ddlQuanHuyen" class="form-select">
+                                    <option value="">-- Chọn Quận/Huyện --</option>
+                                </select>
                             </div>
 
+                            <!-- Phường / Xã -->
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold">Độ rộng đường/hẻm (m)</label>
-                                <input type="number" step="0.1" id="RongDuongMeters" class="form-control" placeholder="Ví dụ: 5.5" />
+                                <label class="form-label fw-bold">Phường / Xã <span class="text-danger">*</span></label>
+                                <select id="ddlPhuongXa" class="form-select" required>
+                                    <option value="">-- Chọn Phường/Xã --</option>
+                                </select>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Số tầng</label>
-                                <input type="number" id="SoTang" class="form-control" value="1" />
+                            <!-- Diện tích -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Diện tích đất (m²) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" step="0.1" id="DienTichDat" class="form-control" placeholder="Ví dụ: 100" required />
+                                    <span class="input-group-text bg-light">m²</span>
+                                </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Số phòng ngủ</label>
-                                <input type="number" id="SoPhongNgu" class="form-control" value="2" />
+                            <!-- Chiều rộng mặt tiền -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Chiều rộng mặt tiền (m)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.1" id="ChieuRongMatTien" class="form-control" placeholder="Ví dụ: 5.5" />
+                                    <span class="input-group-text bg-light">m</span>
+                                </div>
                             </div>
 
+                            <!-- Đường vào rộng -->
                             <div class="col-md-4">
-                                <label class="form-label">Hướng nhà</label>
+                                <label class="form-label fw-bold">Đường vào rộng (m)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.1" id="DuongVaoRong" class="form-control" placeholder="Ví dụ: 6.0" />
+                                    <span class="input-group-text bg-light">m</span>
+                                </div>
+                            </div>
+
+                            <!-- Hướng -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Hướng</label>
                                 <select id="Huong" class="form-select">
-                                    <option value="Dong">Đông</option>
-                                    <option value="Tay">Tây</option>
+                                    <option value="">-- Chọn hướng --</option>
+                                    <option value="Đông">Đông</option>
+                                    <option value="Tây">Tây</option>
                                     <option value="Nam">Nam</option>
-                                    <option value="Bac">Bắc</option>
-                                    <option value="Dong Nam" selected>Đông Nam</option>
+                                    <option value="Bắc">Bắc</option>
+                                    <option value="Đông Nam" selected>Đông Nam</option>
+                                    <option value="Đông Bắc">Đông Bắc</option>
+                                    <option value="Tây Nam">Tây Nam</option>
+                                    <option value="Tây Bắc">Tây Bắc</option>
+                                </select>
+                            </div>
+
+                            <!-- Pháp lý -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Tình trạng pháp lý</label>
+                                <select id="PhapLy" class="form-select">
+                                    <option value="Sổ đỏ / Sổ hồng chính chủ" selected>Sổ đỏ / Sổ hồng chính chủ</option>
+                                    <option value="Đang chờ cấp sổ">Đang chờ cấp sổ</option>
+                                    <option value="Giấy tờ viết tay / Hợp đồng">Giấy tờ viết tay / Hợp đồng</option>
                                 </select>
                             </div>
                         </div>
 
-                        <button type="button" onclick="thucHienDinhGia()" class="btn btn-success w-100 mt-4 py-2 fw-bold">
-                            <i class="bi bi-calculator me-1"></i> Tính giá trị AI
+                        <!-- 2. CÁC TRƯỜNG RIÊNG CỦA NHÀ Ở (TỰ ĐỘNG ẨN NẾU LÀ ĐẤT) -->
+                        <div id="sectionDacTinhNha" class="mb-4">
+                            <h5 class="fw-bold text-primary mb-3">
+                                <i class="bi bi-house-door me-1"></i> Đặc tính công trình nhà ở <span class="badge bg-light text-muted fw-normal ms-2">(Tự động ẩn nếu là Đất)</span>
+                            </h5>
+                            <div class="row g-3 p-3 bg-light rounded-3 border" id="containerDacTinhNha">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Số tầng</label>
+                                    <input type="number" id="SoTang" class="form-control" min="1" value="2" placeholder="Ví dụ: 2" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Số phòng ngủ</label>
+                                    <input type="number" id="SoPhongNgu" class="form-control" min="1" value="3" placeholder="Ví dụ: 3" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Số WC / Phòng tắm</label>
+                                    <input type="number" id="SoWc" class="form-control" min="1" value="2" placeholder="Ví dụ: 2" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Tình trạng nhà</label>
+                                    <input type="text" id="TinhTrangNha" class="form-control" placeholder="Nhà mới xây, Đã qua sử dụng..." />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Tình trạng nội thất</label>
+                                    <input type="text" id="NoiThat" class="form-control" placeholder="Đầy đủ nội thất, Cơ bản, Bàn giao thô..." />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" id="btnTinhGia" onclick="thucHienDinhGia()" class="btn btn-success w-100 py-3 fw-bold rounded-pill shadow-sm fs-5">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Tính giá trị & Dự báo 6 tháng tới
                         </button>
                     </form>
 
-                    <!-- Kết quả hiển thị -->
-                    <div id="ketQuaBox" class="mt-4 p-4 border rounded bg-light d-none">
-                        <h5 class="text-primary fw-bold mb-3">Kết quả phân tích từ AI:</h5>
-                        <div class="row text-center">
-                            <div class="col-md-12 mb-3">
-                                <small class="text-muted d-block">Giá trị định giá dự báo</small>
-                                <h2 id="txtGiaDuBoan" class="text-danger fw-bold m-0">0 VNĐ</h2>
+                    <!-- 3. KẾT QUẢ ĐỊNH GIÁ & BIỂU ĐỒ DỰ BÁO CHART.JS -->
+                    <div id="ketQuaBox" class="mt-5 p-4 border rounded-4 bg-light d-none shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                            <h4 class="text-primary fw-bold mb-0">
+                                <i class="bi bi-award-fill text-warning me-2"></i>Kết quả định giá AI
+                            </h4>
+                            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fw-semibold">
+                                <i class="bi bi-shield-check me-1"></i>Độ tin cậy mô hình: <strong id="txtDoTinCai">0%</strong>
+                            </span>
+                        </div>
+
+                        <!-- 3 Thẻ số liệu chính -->
+                        <div class="row g-3 mb-4 text-center">
+                            <div class="col-md-4">
+                                <div class="card h-100 border-0 shadow-sm p-3 bg-white rounded-3">
+                                    <small class="text-muted fw-semibold">Giá trị định giá dự kiến</small>
+                                    <h3 id="txtGiaDuDoan" class="text-danger fw-bold my-2">0 đ</h3>
+                                    <small class="text-muted">Đơn giá: <strong id="txtDonGiaM2" class="text-dark">0 đ/m²</strong></small>
+                                </div>
                             </div>
-                            <div class="col-md-6 border-end">
-                                <small class="text-muted">Đơn giá ước tính / m²</small>
-                                <h5 id="txtDonGiaM2" class="fw-bold text-dark">0 VNĐ/m²</h5>
+
+                            <div class="col-md-4">
+                                <div class="card h-100 border-0 shadow-sm p-3 bg-white rounded-3">
+                                    <small class="text-muted fw-semibold">Khoảng giá Min (Thấp nhất)</small>
+                                    <h4 id="txtGiaMin" class="text-primary fw-bold my-2">0 đ</h4>
+                                    <small class="text-success"><i class="bi bi-arrow-down-circle me-1"></i>Biên độ -7%</small>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">Độ tin cậy mô hình</small>
-                                <h5 id="txtDoTinCai" class="fw-bold text-success">0%</h5>
+
+                            <div class="col-md-4">
+                                <div class="card h-100 border-0 shadow-sm p-3 bg-white rounded-3">
+                                    <small class="text-muted fw-semibold">Khoảng giá Max (Cao nhất)</small>
+                                    <h4 id="txtGiaMax" class="text-primary fw-bold my-2">0 đ</h4>
+                                    <small class="text-danger"><i class="bi bi-arrow-up-circle me-1"></i>Biên độ +7%</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BIỂU ĐỒ CHART.JS DỰ BÁO XU HƯỚNG GIÁ 6 THÁNG TIẾP THEO -->
+                        <div class="card border-0 shadow-sm rounded-3 p-4 bg-white mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold text-dark mb-0">
+                                    <i class="bi bi-graph-up text-danger me-2"></i>Biểu đồ dự báo xu hướng giá trong 6 tháng tới
+                                </h5>
+                                <span class="badge bg-light text-muted border">Mô hình chu kỳ BĐS</span>
+                            </div>
+                            <div style="position: relative; height: 320px; width: 100%;">
+                                <canvas id="chartDuBao"></canvas>
                             </div>
                         </div>
                     </div>
@@ -91,34 +217,280 @@
 </div>
 
 @section Scripts {
+    <!-- Thư viện Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
-        async function thucHienDinhGia() {
-            const payload = {
-                maLoaiBds: parseInt(document.getElementById('MaLoaiBds').value) || 0,
-                maPhuongXa: parseInt(document.getElementById('MaPhuongXa').value) || 0,
-                dienTichDat: parseFloat(document.getElementById('DienTichDat').value) || 0,
-                rongDuongMeters: parseFloat(document.getElementById('RongDuongMeters').value) || null,
-                soTang: parseInt(document.getElementById('SoTang').value) || 1,
-                soPhongNgu: parseInt(document.getElementById('SoPhongNgu').value) || 1,
-                huong: document.getElementById('Huong').value
-            };
+        // 1. Tự động ẩn/hiện trường đặc tính nhà ở theo Loại BĐS
+        const ddlLoaiBds = document.getElementById('MaLoaiBds');
+        const sectionDacTinhNha = document.getElementById('sectionDacTinhNha');
 
-            const res = await fetch('/DinhGia/TinhGia', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        function toggleDacTinhNha() {
+            const selectedText = ddlLoaiBds.options[ddlLoaiBds.selectedIndex]?.text?.toLowerCase() || '';
+            const isDat = selectedText.includes('đất') || selectedText.includes('dat');
+
+            if (isDat) {
+                sectionDacTinhNha.classList.add('d-none');
+            } else {
+                sectionDacTinhNha.classList.remove('d-none');
+            }
+        }
+
+        if (ddlLoaiBds) {
+            ddlLoaiBds.addEventListener('change', toggleDacTinhNha);
+            toggleDacTinhNha();
+        }
+
+        // 2. Cascade Tỉnh/Thành -> Quận/Huyện -> Phường/Xã
+        const ddlTinh = document.getElementById('ddlTinhThanh');
+        const ddlQuan = document.getElementById('ddlQuanHuyen');
+        const ddlPhuong = document.getElementById('ddlPhuongXa');
+
+        async function loadQuanHuyen(maTinh) {
+            ddlQuan.innerHTML = '<option value="">-- Đang tải... --</option>';
+            ddlPhuong.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+            if (!maTinh) {
+                ddlQuan.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/Home/GetQuanHuyen?maTinh=${maTinh}`);
+                const data = await res.json();
+                ddlQuan.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                data.forEach(q => {
+                    const opt = document.createElement('option');
+                    opt.value = q.maQuanHuyen;
+                    opt.textContent = q.tenQuanHuyen;
+                    ddlQuan.appendChild(opt);
+                });
+                if (data.length > 0) {
+                    ddlQuan.selectedIndex = 1;
+                    loadPhuongXa(ddlQuan.value);
+                }
+            } catch (e) {
+                ddlQuan.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            }
+        }
+
+        async function loadPhuongXa(maQuanHuyen) {
+            ddlPhuong.innerHTML = '<option value="">-- Đang tải... --</option>';
+            if (!maQuanHuyen) {
+                ddlPhuong.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/Home/GetPhuongXa?maQuanHuyen=${maQuanHuyen}`);
+                const data = await res.json();
+                ddlPhuong.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.maPhuongXa;
+                    opt.textContent = p.tenPhuongXa;
+                    ddlPhuong.appendChild(opt);
+                });
+            } catch (e) {
+                ddlPhuong.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            }
+        }
+
+        if (ddlTinh) {
+            ddlTinh.addEventListener('change', function () {
+                loadQuanHuyen(this.value);
             });
+            if (ddlTinh.value) {
+                loadQuanHuyen(ddlTinh.value);
+            }
+        }
 
-            const data = await res.json();
-            if (!data.success) {
-                alert(data.message);
+        if (ddlQuan) {
+            ddlQuan.addEventListener('change', function () {
+                loadPhuongXa(this.value);
+            });
+        }
+
+        // Biến lưu instance của Chart.js để destroy khi render lại
+        let duBaoChartInstance = null;
+
+        // 3. Thực hiện tính toán và vẽ Chart
+        async function thucHienDinhGia() {
+            const btn = document.getElementById('btnTinhGia');
+            const maLoaiBds = parseInt(document.getElementById('MaLoaiBds').value);
+            const maPhuongXa = parseInt(document.getElementById('ddlPhuongXa').value);
+            const dienTich = parseFloat(document.getElementById('DienTichDat').value);
+
+            if (!maLoaiBds) {
+                alert('Vui lòng chọn loại bất động sản.');
+                return;
+            }
+            if (!maPhuongXa) {
+                alert('Vui lòng chọn Phường/Xã.');
+                return;
+            }
+            if (!dienTich || dienTich <= 0) {
+                alert('Vui lòng nhập diện tích đất lớn hơn 0.');
                 return;
             }
 
-            document.getElementById('ketQuaBox').classList.remove('d-none');
-            document.getElementById('txtGiaDuBoan').innerText = data.giaDuBoanVnd.toLocaleString('vi-VN') + ' VNĐ';
-            document.getElementById('txtDonGiaM2').innerText = data.donGiaTrenM2Vnd.toLocaleString('vi-VN') + ' VNĐ/m²';
-            document.getElementById('txtDoTinCai').innerText = data.doTinCaiPhanTram + '%';
+            const payload = {
+                maLoaiBds: maLoaiBds,
+                maPhuongXa: maPhuongXa,
+                dienTich: dienTich,
+                chieuRongMatTien: parseFloat(document.getElementById('ChieuRongMatTien').value) || null,
+                duongVaoRong: parseFloat(document.getElementById('DuongVaoRong').value) || null,
+                huong: document.getElementById('Huong').value || null,
+                phapLy: document.getElementById('PhapLy').value || null,
+                soTang: parseInt(document.getElementById('SoTang')?.value) || null,
+                soPhongNgu: parseInt(document.getElementById('SoPhongNgu')?.value) || null,
+                soWc: parseInt(document.getElementById('SoWc')?.value) || null,
+                tinhTrangNha: document.getElementById('TinhTrangNha')?.value || null,
+                noiThat: document.getElementById('NoiThat')?.value || null
+            };
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang chạy mô hình AI phân tích...';
+
+            try {
+                const res = await fetch('/DinhGia/TinhGia', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message || 'Có lỗi xảy ra trong quá trình tính toán.');
+                    return;
+                }
+
+                // Hiển thị hộp kết quả
+                document.getElementById('ketQuaBox').classList.remove('d-none');
+                document.getElementById('txtGiaDuDoan').innerText = (data.giaDuDoanVnd || 0).toLocaleString('vi-VN') + ' đ';
+                document.getElementById('txtGiaMin').innerText = (data.giaThapNhatVnd || 0).toLocaleString('vi-VN') + ' đ';
+                document.getElementById('txtGiaMax').innerText = (data.giaCaoNhatVnd || 0).toLocaleString('vi-VN') + ' đ';
+                document.getElementById('txtDonGiaM2').innerText = (data.donGiaTrenM2Vnd || 0).toLocaleString('vi-VN') + ' đ/m²';
+                document.getElementById('txtDoTinCai').innerText = (data.doTinCayPhanTram || 91.5) + '%';
+
+                // Cuộn mượt đến hộp kết quả
+                document.getElementById('ketQuaBox').scrollIntoView({ behavior: 'smooth' });
+
+                // Vẽ Biểu đồ Chart.js
+                veBieuDoDuBao(data.giaDuDoanVnd, data.danhSachDuBao6Thang);
+            } catch (e) {
+                alert('Lỗi kết nối máy chủ khi định giá.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Tính giá trị & Dự báo 6 tháng tới';
+            }
+        }
+
+        function veBieuDoDuBao(giaHienTai, danhSachDuBao) {
+            const ctx = document.getElementById('chartDuBao').getContext('2d');
+
+            const labels = ['Hiện tại'];
+            const dataPrices = [giaHienTai / 1000000]; // Đơn vị: Triệu VNĐ
+            const dataMin = [giaHienTai * 0.93 / 1000000];
+            const dataMax = [giaHienTai * 1.07 / 1000000];
+
+            if (danhSachDuBao && danhSachDuBao.length > 0) {
+                danhSachDuBao.forEach(item => {
+                    labels.push(item.nhanThang);
+                    dataPrices.push(item.giaDuBaoVnd / 1000000);
+                    dataMin.push(item.giaMinVnd / 1000000);
+                    dataMax.push(item.giaMaxVnd / 1000000);
+                });
+            }
+
+            if (duBaoChartInstance) {
+                duBaoChartInstance.destroy();
+            }
+
+            duBaoChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Giá dự báo AI (Triệu VNĐ)',
+                            data: dataPrices,
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#dc3545',
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Biên độ Max (Triệu VNĐ)',
+                            data: dataMax,
+                            borderColor: '#0d6efd',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            pointRadius: 3,
+                            fill: false,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Biên độ Min (Triệu VNĐ)',
+                            data: dataMin,
+                            borderColor: '#198754',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            pointRadius: 3,
+                            fill: false,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    family: 'Inter',
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.parsed.y;
+                                    return context.dataset.label + ': ' + val.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu VNĐ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Giá trị (Triệu VNĐ)',
+                                font: { weight: 'bold' }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('vi-VN') + ' tr';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
         }
     </script>
 }

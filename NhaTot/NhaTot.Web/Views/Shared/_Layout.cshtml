@@ -1,3 +1,19 @@
+@inject NhaTot.Domain.Entities.NhaTotDbContext DbContext
+@{
+    decimal layoutSoDuVi = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var uidClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (long.TryParse(uidClaim, out var uId))
+        {
+            var viTk = DbContext.ViTaiKhoans.FirstOrDefault(v => v.MaNguoiDung == uId);
+            if (viTk != null)
+            {
+                layoutSoDuVi = viTk.SoDuDiem ?? 0;
+            }
+        }
+    }
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -109,7 +125,7 @@
                             <a class="nav-link nav-link-custom text-primary fw-semibold" href="/DinhGia"><i class="bi bi-cpu me-1"></i>Định giá AI</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom text-danger fw-semibold" href="#"><i class="bi bi-crosshair me-1"></i>Bẫy giá</a>
+                            <a class="nav-link nav-link-custom text-danger fw-semibold" href="/BayGia"><i class="bi bi-crosshair me-1"></i>Bẫy giá</a>
                         </li>
                     </ul>
 
@@ -121,9 +137,9 @@
                             <!-- TRẠNG THÁI: ĐÃ ĐĂNG NHẬP -->
                             
                             <!-- 1. Hiển thị Ví điểm của tài khoản -->
-                            <a href="/NguoiDung/QuanLyVi" class="text-decoration-none d-none d-md-flex align-items-center px-3 py-1 bg-light rounded-pill border">
+                            <a href="/NguoiDung/QuanLyVi" class="text-decoration-none d-none d-md-flex align-items-center px-3 py-1 bg-light rounded-pill border shadow-sm" title="Số dư ví tài khoản">
                                 <i class="bi bi-wallet2 text-warning me-2"></i>
-                                <span class="small fw-semibold text-dark">@string.Format("{0:N0} đ", ViewBag.SoDuVi ?? 0)</span>
+                                <span class="small fw-bold text-primary">@string.Format("{0:N0} điểm", layoutSoDuVi)</span>
                             </a>
 
                             <!-- 2. Menu thả xuống cho User đã đăng nhập -->
@@ -134,10 +150,17 @@
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2">
                                     <li><h6 class="dropdown-header">Xin chào, <strong>@User.Identity.Name</strong></h6></li>
                                     <li><a class="dropdown-item" href="/NguoiDung/QuanLyTin"><i class="bi bi-journal-text me-2"></i>Quản lý tin đăng</a></li>
-                                    <li><a class="dropdown-item" href="/NguoiDung/LichHen"><i class="bi bi-calendar-check me-2"></i>Lịch hẹn xem nhà</a></li>
+                                    <li><a class="dropdown-item" href="/NguoiDung/LichHen"><i class="bi bi-calendar-check me-2 text-primary"></i>Lịch hẹn của tôi</a></li>
+                                    <li><a class="dropdown-item" href="/BayGia"><i class="bi bi-crosshair me-2 text-danger"></i>Mục tiêu Bẫy giá</a></li>
                                     <li><a class="dropdown-item" href="/NguoiDung/LichSuGiaoDich"><i class="bi bi-wallet2 me-2"></i>Lịch sử ví điểm</a></li>
                                     <li><a class="dropdown-item" href="/NguoiDung/TinDaLuu"><i class="bi bi-heart me-2"></i>Tin đã lưu</a></li>
                                     
+                                    @if (User.IsInRole("Consultant") || User.Claims.Any(c => c.Type == "VaiTro" && (c.Value == "3" || c.Value == "4")))
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-primary fw-bold" href="/Consultant/YeuCauTuVan"><i class="bi bi-headset me-2"></i>Kênh Tư Vấn Viên</a></li>
+                                    }
+
                                     @if (User.IsInRole("Admin"))
                                     {
                                         <li><hr class="dropdown-divider"></li>

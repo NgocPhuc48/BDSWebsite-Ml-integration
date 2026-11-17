@@ -29,6 +29,7 @@ namespace NhaTot.Web.Models
         public DateTime NgayHen { get; set; }
 
         public string? GioHen { get; set; }
+        public string? DiaDiem { get; set; }
         public string? GhiChu { get; set; }
     }
 

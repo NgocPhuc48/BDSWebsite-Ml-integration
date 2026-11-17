@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
@@ -30,6 +31,15 @@ namespace NhaTot.Web.Controllers
         {
             var tinDang = await _context.TinDangs
                 .Include(t => t.MaBdsNavigation)
+                    .ThenInclude(b => b!.MaLoaiBdsNavigation)
+                .Include(t => t.MaBdsNavigation)
+                    .ThenInclude(b => b!.MaPhuongXaNavigation)
+                        .ThenInclude(p => p!.MaQuanHuyenNavigation)
+                            .ThenInclude(q => q!.MaTinhNavigation)
+                .Include(t => t.MaBdsNavigation)
+                    .ThenInclude(b => b!.ChiTietNhas)
+                .Include(t => t.MaBdsNavigation)
+                    .ThenInclude(b => b!.ChiTietDats)
                 .Include(t => t.MaNguoiDangNavigation)
                 .FirstOrDefaultAsync(t => t.MaTin == id);
 
@@ -39,12 +49,15 @@ namespace NhaTot.Web.Controllers
             }
 
             BatDongSan? bds = tinDang.MaBdsNavigation;
-            ChiTietNha? chiTietNha = null;
-            ChiTietDat? chiTietDat = null;
+            ChiTietNha? chiTietNha = bds?.ChiTietNhas?.FirstOrDefault();
+            ChiTietDat? chiTietDat = bds?.ChiTietDats?.FirstOrDefault();
 
-            if (bds != null)
+            if (chiTietNha == null && bds != null)
             {
                 chiTietNha = await _context.ChiTietNhas.FirstOrDefaultAsync(n => n.MaBds == bds.MaBds);
+            }
+            if (chiTietDat == null && bds != null)
+            {
                 chiTietDat = await _context.ChiTietDats.FirstOrDefaultAsync(d => d.MaBds == bds.MaBds);
             }
 
@@ -128,14 +141,14 @@ namespace NhaTot.Web.Controllers
 
             // Xử lý lưu các tập tin hình ảnh upload
             List<string> imagePaths = new List<string>();
+            string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "tindang");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
             if (model.HinhAnhFiles != null && model.HinhAnhFiles.Count > 0)
             {
-                string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "tindang");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
                 foreach (var file in model.HinhAnhFiles)
                 {
                     if (file.Length > 0)
@@ -152,26 +165,115 @@ namespace NhaTot.Web.Controllers
                 }
             }
 
-            // Lấy tọa độ từ phường/xã để đồng bộ lên bản đồ GIS
-            var phuongXa = await _context.PhuongXas.FindAsync(model.MaPhuongXa);
-            decimal viDoDefault = phuongXa?.ViDo ?? 18.6738m;
-            decimal kinhDoDefault = phuongXa?.KinhDo ?? 105.6925m;
+            // Xử lý lưu các tập tin ảnh sổ đỏ / sổ hồng
+            List<string> soDoPaths = new List<string>();
+            if (model.AnhSoDoFiles != null && model.AnhSoDoFiles.Count > 0)
+            {
+                string sodoFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "sodo");
+                if (!Directory.Exists(sodoFolder))
+                {
+                    Directory.CreateDirectory(sodoFolder);
+                }
 
-            // Tạo đối tượng BatDongSan (dùng DienTichDat đúng schema SQL kèm tọa độ GIS)
+                foreach (var file in model.AnhSoDoFiles)
+                {
+                    if (file.Length > 0)
+                    {
+                        string uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(file.FileName);
+                        string filePath = Path.Combine(sodoFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(fileStream);
+                        }
+                        soDoPaths.Add("/uploads/sodo/" + uniqueFileName);
+                    }
+                }
+            }
+
+            // Lấy tọa độ người dùng chọn từ bản đồ hoặc tự định vị, xử lý format và chống tràn số SQL DECIMAL(10, 7)
+            decimal viDoDefault = 18.6738m;
+            decimal kinhDoDefault = 105.6925m;
+
+            // Đọc trực tiếp từ form để tránh lỗi model binder bị ảnh hưởng bởi Culture (dấu chấm vs dấu phẩy)
+            string? rawViDo = Request.Form["ViDo"].FirstOrDefault();
+            string? rawKinhDo = Request.Form["KinhDo"].FirstOrDefault();
+
+            decimal? parsedViDo = null;
+            if (!string.IsNullOrWhiteSpace(rawViDo))
+            {
+                string cleanViDo = rawViDo.Trim().Replace(',', '.');
+                if (decimal.TryParse(cleanViDo, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+                {
+                    parsedViDo = v;
+                }
+            }
+            if (!parsedViDo.HasValue && model.ViDo.HasValue)
+            {
+                parsedViDo = model.ViDo.Value;
+            }
+
+            decimal? parsedKinhDo = null;
+            if (!string.IsNullOrWhiteSpace(rawKinhDo))
+            {
+                string cleanKinhDo = rawKinhDo.Trim().Replace(',', '.');
+                if (decimal.TryParse(cleanKinhDo, NumberStyles.Any, CultureInfo.InvariantCulture, out var k))
+                {
+                    parsedKinhDo = k;
+                }
+            }
+            if (!parsedKinhDo.HasValue && model.KinhDo.HasValue)
+            {
+                parsedKinhDo = model.KinhDo.Value;
+            }
+
+            // Kiểm tra khoảng hợp lệ: ViDo từ -90 đến 90, KinhDo từ -180 đến 180 và làm tròn Math.Round(..., 7)
+            decimal viDoValue;
+            if (parsedViDo.HasValue && parsedViDo.Value >= -90m && parsedViDo.Value <= 90m)
+            {
+                viDoValue = Math.Round(parsedViDo.Value, 7);
+            }
+            else
+            {
+                viDoValue = viDoDefault;
+            }
+
+            decimal kinhDoValue;
+            if (parsedKinhDo.HasValue && parsedKinhDo.Value >= -180m && parsedKinhDo.Value <= 180m)
+            {
+                kinhDoValue = Math.Round(parsedKinhDo.Value, 7);
+            }
+            else
+            {
+                kinhDoValue = kinhDoDefault;
+            }
+
+            // Tạo đối tượng BatDongSan đầy đủ các thuộc tính (Diện tích đất, Diện tích sử dụng, Hướng, Pháp lý, Tên dự án, Địa chỉ mô tả, Tọa độ GIS)
             var bds = new BatDongSan
             {
                 MaLoaiBds = model.MaLoaiBds,
                 MaPhuongXa = model.MaPhuongXa,
                 DiaChiMoTa = model.DiaChiMoTa,
-                DienTichDat = (decimal)model.DienTichDatM2,
-                ViDo = viDoDefault,
-                KinhDo = kinhDoDefault
+                TenDuAn = model.TenDuAn,
+                DienTichDat = model.DienTichDatM2,
+                DienTichSuDung = model.DienTichSuDungM2,
+                Huong = model.Huong,
+                PhapLy = model.PhapLy,
+                MoTaDacDiem = model.MoTaDacDiem,
+                ViDo = viDoValue,
+                KinhDo = kinhDoValue,
+                NgayTao = DateTime.Now
             };
             _context.BatDongSans.Add(bds);
             await _context.SaveChangesAsync();
 
-            // Lưu thông tin chi tiết nhà (nếu có)
-            if (model.SoTang.HasValue || model.SoPhongNgu.HasValue || model.SoWc.HasValue)
+            // Kiểm tra loại BĐS để lưu thông tin tương ứng (Đất hoặc Nhà)
+            var loaiBds = await _context.LoaiBds.FindAsync(model.MaLoaiBds);
+            bool isDat = loaiBds != null && (loaiBds.TenLoaiBds?.IndexOf("Đất", StringComparison.OrdinalIgnoreCase) >= 0
+                                          || loaiBds.TenLoaiBds?.IndexOf("Dat", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            // Lưu thông tin chi tiết nhà (ChiTietNha) nếu không phải thuần đất và có dữ liệu nhập
+            if (!isDat && (model.SoTang.HasValue || model.SoPhongNgu.HasValue || model.SoWc.HasValue || model.NamXayDung.HasValue || !string.IsNullOrEmpty(model.TinhTrangNha) || !string.IsNullOrEmpty(model.NoiThat)))
             {
                 var chiTietNha = new ChiTietNha
                 {
@@ -186,17 +288,17 @@ namespace NhaTot.Web.Controllers
                 _context.ChiTietNhas.Add(chiTietNha);
             }
 
-            // Lưu thông tin chi tiết đất (nếu có)
-            if (!string.IsNullOrEmpty(model.LoaiDat) || model.MatTienM.HasValue || model.ChieuSauM.HasValue)
+            // Lưu thông tin chi tiết đất (ChiTietDat) nếu có dữ liệu đất
+            if (!string.IsNullOrEmpty(model.LoaiDat) || model.MatTienM.HasValue || model.ChieuSauM.HasValue || !string.IsNullOrEmpty(model.LoaiDuong) || model.DoRongDuongM.HasValue || !string.IsNullOrEmpty(model.HinhDang))
             {
                 var chiTietDat = new ChiTietDat
                 {
                     MaBds = bds.MaBds,
                     LoaiDat = model.LoaiDat,
-                    MatTienM = model.MatTienM.HasValue ? (decimal)model.MatTienM.Value : null,
-                    ChieuSauM = model.ChieuSauM.HasValue ? (decimal)model.ChieuSauM.Value : null,
+                    MatTienM = model.MatTienM,
+                    ChieuSauM = model.ChieuSauM,
                     LoaiDuong = model.LoaiDuong,
-                    DoRongDuongM = model.DoRongDuongM.HasValue ? (decimal)model.DoRongDuongM.Value : null,
+                    DoRongDuongM = model.DoRongDuongM,
                     HinhDang = model.HinhDang
                 };
                 _context.ChiTietDats.Add(chiTietDat);
@@ -207,10 +309,15 @@ namespace NhaTot.Web.Controllers
             {
                 MaBds = bds.MaBds,
                 MaNguoiDang = currentUserId,
+                LoaiGiaoDich = model.LoaiGiaoDich ?? "BAN",
                 TieuDe = model.TieuDe,
                 MoTa = model.MoTa,
                 GiaRaoVnd = model.GiaRaoVnd,
-                DanhSachAnhDatDai = string.Join(",", imagePaths),
+                TienCocVnd = model.TienCocVnd,
+                KyHanThanhToanThang = model.KyHanThanhToanThang,
+                ThoiHanHopDongMinThang = model.ThoiHanHopDongMinThang,
+                DanhSachAnhDatDai = imagePaths.Count > 0 ? string.Join(",", imagePaths) : null,
+                DanhSachAnhSoDoSoHong = soDoPaths.Count > 0 ? string.Join(",", soDoPaths) : null,
                 NgayDang = DateTime.Now,
                 TrangThai = "PENDING"
             };
@@ -227,10 +334,25 @@ namespace NhaTot.Web.Controllers
         public async Task<IActionResult> DatLichHen([FromBody] DatLichHenInputModel model)
         {
             if (!ModelState.IsValid)
-                return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
+                return Json(new { success = false, message = "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại!" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            long currentUserId = long.TryParse(userIdClaim, out var parsedId) ? parsedId : 1;
+            if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out var currentUserId) || currentUserId <= 0)
+            {
+                return Json(new { success = false, requireLogin = true, message = "Vui lòng đăng nhập để đặt lịch hẹn xem nhà." });
+            }
+
+            var tinDang = await _context.TinDangs
+                .Include(t => t.MaBdsNavigation)
+                    .ThenInclude(b => b!.MaPhuongXaNavigation)
+                        .ThenInclude(p => p!.MaQuanHuyenNavigation)
+                            .ThenInclude(q => q!.MaTinhNavigation)
+                .FirstOrDefaultAsync(t => t.MaTin == model.MaTin);
+
+            if (tinDang == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy thông tin bất động sản." });
+            }
 
             DateTime thoiGian = model.NgayHen;
             if (!string.IsNullOrEmpty(model.GioHen) && TimeSpan.TryParse(model.GioHen, out var timeSpan))
@@ -238,11 +360,42 @@ namespace NhaTot.Web.Controllers
                 thoiGian = thoiGian.Date.Add(timeSpan);
             }
 
+            if (thoiGian < DateTime.Now)
+            {
+                return Json(new { success = false, message = "Thời gian hẹn phải lớn hơn thời điểm hiện tại!" });
+            }
+
+            // Địa điểm gặp: ưu tiên địa điểm nhập vào, nếu trống thì lấy địa chỉ đầy đủ của BĐS
+            var bds = tinDang.MaBdsNavigation;
+            string diaChiBds = bds != null
+                ? string.Join(", ", new[] { bds.DiaChiMoTa, bds.MaPhuongXaNavigation?.TenPhuongXa, bds.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.TenQuanHuyen, bds.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.MaTinhNavigation?.TenTinh }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                : $"BĐS #{tinDang.MaTin}";
+
+            string diaDiemGap = !string.IsNullOrWhiteSpace(model.DiaDiem) ? model.DiaDiem.Trim() : diaChiBds;
+
+            // 1. Tự động tạo 1 bản ghi YeuCauTuVan (TrangThai = 'CHO_XU_LY')
+            var user = await _context.NguoiDungs.FindAsync(currentUserId);
+            var yeuCau = new YeuCauTuVan
+            {
+                MaNguoiGui = currentUserId,
+                TieuDe = $"Khách hẹn xem BĐS #{tinDang.MaTin}: {tinDang.TieuDe}",
+                NoiDung = $"Khách hàng {user?.HoTen ?? "Khách"} đặt lịch hẹn xem nhà thực tế lúc {thoiGian:dd/MM/yyyy HH:mm} tại '{diaDiemGap}'. Ghi chú: {(string.IsNullOrWhiteSpace(model.GhiChu) ? "Không có" : model.GhiChu)}",
+                MucDoUuTien = 2,
+                TrangThai = "CHO_XU_LY",
+                NgayTao = DateTime.Now
+            };
+
+            _context.YeuCauTuVans.Add(yeuCau);
+            await _context.SaveChangesAsync(); // Lưu để lấy MaYeuCau
+
+            // 2. Tự động tạo 1 bản ghi LichHen gắn với MaYeuCau vừa tạo
             var lichHen = new LichHen
             {
+                MaYeuCau = yeuCau.MaYeuCau,
                 MaTin = model.MaTin,
                 MaNguoiTao = currentUserId,
                 ThoiGianHen = thoiGian,
+                DiaDiem = diaDiemGap,
                 GhiChu = model.GhiChu,
                 TrangThai = "CHO_XAC_NHAN"
             };
@@ -250,7 +403,11 @@ namespace NhaTot.Web.Controllers
             _context.LichHens.Add(lichHen);
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, message = "Đặt lịch hẹn thành công! Bạn có thể theo dõi trong mục Quản lý Lịch hẹn." });
+            return Json(new
+            {
+                success = true,
+                message = "Đặt lịch hẹn xem nhà thành công! Yêu cầu của bạn đã được chuyển đến bộ phận Tư vấn viên để sắp xếp và liên hệ xác nhận."
+            });
         }
 
         // POST: /TinDang/GuiYeuCauTuVan

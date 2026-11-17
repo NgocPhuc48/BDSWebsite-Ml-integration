@@ -120,8 +120,14 @@
                 <a href="/Admin/LoaiBds" class="nav-link-custom @(currentController == "LoaiBds" ? "active" : "")">
                     <i class="bi bi-tags-fill"></i> Loại Bất động sản
                 </a>
-                <a href="/Admin/DiaChinh" class="nav-link-custom @(currentController == "DiaChinh" || currentController == "TinhThanh" || currentController == "QuanHuyen" || currentController == "PhuongXa" ? "active" : "")">
-                    <i class="bi bi-geo-alt-fill"></i> Quản lý Địa chính
+                <a href="/Admin/TinhThanh" class="nav-link-custom @(currentController == "TinhThanh" ? "active" : "")">
+                    <i class="bi bi-map"></i> Tỉnh / Thành phố
+                </a>
+                <a href="/Admin/QuanHuyen" class="nav-link-custom @(currentController == "QuanHuyen" ? "active" : "")">
+                    <i class="bi bi-geo-alt-fill"></i> Quận / Huyện / Thị xã
+                </a>
+                <a href="/Admin/PhuongXa" class="nav-link-custom @(currentController == "PhuongXa" ? "active" : "")">
+                    <i class="bi bi-pin-map-fill"></i> Phường / Xã / Thị trấn
                 </a>
 
                 <!-- 3. TIN ĐĂNG & QUẢN TRỊ BĐS -->
@@ -143,7 +149,10 @@
                 </a>
 
                 <!-- 5. TƯ VẤN & BẪY GIÁ MỤC TIÊU -->
-                <div class="sidebar-category">Tư vấn hỗ trợ</div>
+                <div class="sidebar-category">Tư vấn & Bẫy giá</div>
+                <a href="/Admin/BayGia" class="nav-link-custom @(currentController == "BayGia" ? "active" : "")">
+                    <i class="bi bi-crosshair text-danger"></i> Quản lý Bẫy Giá Mục Tiêu
+                </a>
                 <a href="/Admin/PhanCongTuVan" class="nav-link-custom @(currentController == "PhanCongTuVan" ? "active" : "")">
                     <i class="bi bi-headset"></i> Phân công tư vấn
                 </a>

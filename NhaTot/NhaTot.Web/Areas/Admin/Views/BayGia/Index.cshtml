@@ -1,0 +1,242 @@
+@model NhaTot.Web.Areas.Admin.Models.AdminBayGiaViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Bẫy Giá Mục Tiêu";
+    string currentFilter = Model.FilterTrangThai ?? "ALL";
+}
+
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-crosshair text-danger me-2"></i>Quản lý Bẫy Giá Mục Tiêu
+        </h3>
+        <p class="text-muted mb-0">Theo dõi danh sách mục tiêu săn giá BĐS của người dùng, đối soát tin khớp và hoàn tiền cọc quá hạn</p>
+    </div>
+    <div>
+        <form asp-area="Admin" asp-controller="BayGia" asp-action="ChayDoiSoatVaHoanCoc" method="post" onsubmit="return confirm('Hệ thống sẽ kiểm tra toàn bộ mục tiêu ĐÃ QUÁ HẠN 1 THÁNG. Nếu 0 tin khớp sẽ tự động hoàn cọc vào ví, nếu có tin khớp sẽ đánh dấu ĐÃ KHỚP LỆNH. Bạn có chắc chắn muốn chạy đối soát ngay?');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger fw-bold rounded-pill px-4 py-2 shadow-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>Chạy quét đối soát & Hoàn cọc hết hạn
+            </button>
+        </form>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["InfoMessage"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>@TempData["InfoMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Thống kê nhanh Widget Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-4 bg-primary-subtle text-primary p-3 me-3">
+                    <i class="bi bi-radar fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Mục tiêu đang chạy</span>
+                    <h3 class="fw-bold mb-0 text-dark">@Model.TongMucTieuDangChay</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-4 bg-warning-subtle text-warning-emphasis p-3 me-3">
+                    <i class="bi bi-shield-lock-fill fs-3 text-warning"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Tiền cọc đang tạm giữ</span>
+                    <h3 class="fw-bold mb-0 text-warning">@Model.TongDiemTamGiuCoc.ToString("N0") <small class="fs-6 text-muted">đ</small></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-4 bg-success-subtle text-success p-3 me-3">
+                    <i class="bi bi-check-circle-fill fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Mục tiêu đã khớp tin</span>
+                    <h3 class="fw-bold mb-0 text-success">@Model.TongMucTieuDaKhop</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="rounded-4 bg-info-subtle text-info p-3 me-3">
+                    <i class="bi bi-arrow-counterclockwise fs-3"></i>
+                </div>
+                <div>
+                    <span class="text-muted small fw-semibold text-uppercase">Mục tiêu đã hoàn cọc</span>
+                    <h3 class="fw-bold mb-0 text-info">@Model.TongMucTieuDaHoanTien</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Lọc Trạng Thái -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-2">
+        <ul class="nav nav-pills">
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "ALL" ? "active" : "") fw-semibold" href="/Admin/BayGia?trangThai=ALL">
+                    Tất cả mục tiêu
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "DANG_THEO_DOI" ? "active" : "") fw-semibold" href="/Admin/BayGia?trangThai=DANG_THEO_DOI">
+                    <i class="bi bi-radar me-1"></i> Đang theo dõi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "DA_KHOP_LENH" ? "active" : "") fw-semibold" href="/Admin/BayGia?trangThai=DA_KHOP_LENH">
+                    <i class="bi bi-check-circle me-1"></i> Đã khớp lệnh
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(currentFilter == "DA_HOAN_TIEN" ? "active" : "") fw-semibold" href="/Admin/BayGia?trangThai=DA_HOAN_TIEN">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Đã hoàn cọc
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 80px;">Mã</th>
+                        <th>Người dùng & Ví</th>
+                        <th>Khu vực & Loại BĐS</th>
+                        <th>Giá mong muốn</th>
+                        <th>Điểm cọc</th>
+                        <th>Thời hạn (1 tháng)</th>
+                        <th>Tin khớp</th>
+                        <th class="text-end pe-4">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.DanhSachMucTieu.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Không có mục tiêu theo dõi giá nào trong bộ lọc này!
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model.DanhSachMucTieu)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold">#@item.MaMucTieu</td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@item.TenNguoiDung</div>
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-telephone me-1"></i>@item.SoDienThoai
+                                        &bull; Ví: <strong class="text-primary">@((item.SoDuViHienTai ?? 0).ToString("N0")) đ</strong>
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">
+                                        @item.TenLoaiBds
+                                        <span class="badge @(item.LoaiGiaoDich == "BAN" ? "bg-danger-subtle text-danger" : "bg-success-subtle text-success") border ms-1">
+                                            @(item.LoaiGiaoDich == "BAN" ? "Mua bán" : "Cho thuê")
+                                        </span>
+                                    </div>
+                                    <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>@item.TenKhuVuc</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-danger">
+                                        @(item.GiaMongMuonVnd.HasValue ? string.Format("{0:N0} đ", item.GiaMongMuonVnd.Value) : "Không giới hạn")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-coin me-1"></i>@((item.TienCocDiem ?? 100000).ToString("N0")) đ
+                                    </span>
+                                </td>
+                                <td>
+                                    <div><small class="text-muted">Tạo: @item.NgayTao?.ToString("dd/MM/yyyy HH:mm")</small></div>
+                                    <div class="small @(item.DaQuaHan ? "text-danger fw-bold" : "text-muted")">
+                                        <i class="bi bi-clock me-1"></i>Hết hạn: @(item.NgayHetHan?.ToString("dd/MM/yyyy") ?? "--")
+                                        @if (item.DaQuaHan)
+                                        {
+                                            <span class="badge bg-danger ms-1">Quá hạn</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (item.SoTinKhop > 0)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-6">
+                                            <i class="bi bi-check-all me-1"></i>@item.SoTinKhop tin
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted border px-2 py-1">
+                                            0 tin
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    @if (item.TrangThai == "DANG_THEO_DOI" || item.TrangThai == "ACTIVE")
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                                            <i class="bi bi-radar me-1"></i>Đang theo dõi
+                                        </span>
+                                    }
+                                    else if (item.TrangThai == "DA_KHOP_LENH")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                            <i class="bi bi-check-circle me-1"></i>Đã khớp lệnh
+                                        </span>
+                                    }
+                                    else if (item.TrangThai == "DA_HOAN_TIEN")
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đã hoàn cọc
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">
+                                            @item.TrangThai
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

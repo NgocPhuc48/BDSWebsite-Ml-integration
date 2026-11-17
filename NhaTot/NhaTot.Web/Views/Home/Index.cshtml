@@ -216,12 +216,54 @@
         <div class="row g-4">
             @if (Model.TinMoiNhat.Any())
             {
+                var defaultImg = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=600&q=80";
+
                 foreach (var item in Model.TinMoiNhat)
                 {
+                    // Lấy ảnh đầu tiên (img[0]) từ DanhSachAnhDatDai (hỗ trợ cả JSON mảng và chuỗi ngăn cách bởi , ; | \n)
+                    string anhDaiDien = defaultImg;
+                    string rawAnh = item.AnhDaiDien ?? item.HinhAnh ?? "";
+
+                    if (!string.IsNullOrWhiteSpace(rawAnh))
+                    {
+                        rawAnh = rawAnh.Trim();
+                        if (rawAnh.StartsWith("[") && rawAnh.EndsWith("]"))
+                        {
+                            try
+                            {
+                                var jsonArr = System.Text.Json.JsonSerializer.Deserialize<List<string>>(rawAnh);
+                                if (jsonArr != null && jsonArr.Count > 0 && !string.IsNullOrWhiteSpace(jsonArr[0]))
+                                {
+                                    anhDaiDien = jsonArr[0].Trim();
+                                }
+                            }
+                            catch
+                            {
+                                // Fallback nếu parse JSON lỗi
+                                var parts = rawAnh.Trim('[', ']', '"', '\'').Split(new[] { "\",\"", "','", ",", ";", "|" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                if (parts.Length > 0 && !string.IsNullOrWhiteSpace(parts[0]))
+                                {
+                                    anhDaiDien = parts[0].Trim('"', '\'', ' ');
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var parts = rawAnh.Split(new[] { ',', ';', '|', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                            if (parts.Length > 0 && !string.IsNullOrWhiteSpace(parts[0]))
+                            {
+                                anhDaiDien = parts[0].Trim();
+                            }
+                        }
+                    }
+
                     <div class="col-12 col-md-6 col-lg-3">
                         <div class="card h-100 bds-card-modern">
                             <div class="position-relative">
-                                <img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=600&q=80" class="card-img-top bds-card-img" alt="@item.TieuDe">
+                                <img src="@anhDaiDien" 
+                                     class="card-img-top bds-card-img" 
+                                     alt="@item.TieuDe"
+                                     onerror="this.onerror=null; this.src='@defaultImg';">
                                 <span class="position-absolute top-0 start-0 m-3 badge @(item.LoaiGiaoDich == "BAN" ? "bg-danger" : "bg-success")">
                                     @(item.LoaiGiaoDich == "BAN" ? "BÁN" : "CHO THUÊ")
                                 </span>
@@ -364,20 +406,35 @@
                             iconAnchor: [30, 15]
                         });
 
-                        const marker = L.marker([p.viDo, p.kinhDo], { icon: customIcon });
-                        boundsList.push([p.viDo, p.kinhDo]);
+                        // Đảm bảo tọa độ là số float hợp lệ chuẩn Quốc tế
+                        const lat = parseFloat(p.viDo);
+                        const lng = parseFloat(p.kinhDo);
+                        if (isNaN(lat) || isNaN(lng)) return;
+
+                        const marker = L.marker([lat, lng], { icon: customIcon });
+                        boundsList.push([lat, lng]);
 
                         const popupHtml = `
                             <div style="width: 220px; font-family: 'Inter', sans-serif;">
                                 <h6 class="fw-bold mb-1 text-dark">${p.tieuDe}</h6>
-                                <div class="text-danger fw-bold mb-1">${priceFormatted} - ${p.dienTichDat}m²</div>
-                                <small class="text-muted d-block mb-2">${p.diaChi}</small>
+                                <div class="text-danger fw-bold mb-1">${priceFormatted} ${p.dienTichDat ? '- ' + p.dienTichDat + 'm²' : ''}</div>
+                                <small class="text-muted d-block mb-2">${p.diaChi || ''}</small>
                                 <a href="/TinDang/ChiTiet/${p.maTin}" class="btn btn-sm btn-primary w-100 text-white fw-bold">Xem Chi Tiết</a>
                             </div>
                         `;
                         marker.bindPopup(popupHtml);
                         markerGroup.addLayer(marker);
                     });
+
+                    // Nếu có ghim và đang tải ban đầu, tự căn chỉnh khung nhìn bản đồ bao trọn các ghim
+                    if (boundsList.length > 0 && map.getZoom() === 13) {
+                        try {
+                            const b = L.latLngBounds(boundsList);
+                            if (b.isValid()) {
+                                map.fitBounds(b, { padding: [40, 40], maxZoom: 14 });
+                            }
+                        } catch (e) { }
+                    }
                 }
             } catch (err) {
                 console.error("Lỗi tải ghim bản đồ:", err);

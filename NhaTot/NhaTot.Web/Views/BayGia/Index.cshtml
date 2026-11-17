@@ -1,0 +1,652 @@
+@model NhaTot.Web.Models.BayGiaIndexViewModel
+@{
+    ViewData["Title"] = "Bẫy Giá Bất Động Sản - Săn tin hời tự động";
+}
+
+<div class="container py-4">
+    <!-- Header banner -->
+    <div class="row align-items-center mb-4 pb-2 border-bottom">
+        <div class="col-md-8">
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-crosshair text-danger me-2"></i>Bẫy Giá Bất Động Sản
+            </h2>
+            <p class="text-muted mb-0">Thiết lập mục tiêu săn nhà đất theo khoảng giá & tiêu chí chi tiết mong muốn. Hệ thống tự động quét và ghép nối tin đăng mới từ hệ thống và mạng xã hội.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="d-inline-flex align-items-center p-2 px-3 bg-light border rounded-pill shadow-sm">
+                <i class="bi bi-wallet2 text-warning fs-5 me-2"></i>
+                <div class="text-start">
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Số dư ví tài khoản</small>
+                    <span class="fw-bold text-primary">@Model.SoDuViHienTai.ToString("N0") đ</span>
+                </div>
+                <a href="/NguoiDung/QuanLyVi" class="btn btn-sm btn-outline-primary ms-3 rounded-pill px-3">
+                    <i class="bi bi-plus-circle me-1"></i>Nạp tiền
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- 1. Form Tạo Mục Tiêu & Thanh Toán Liền -->
+    <div class="card border-0 shadow-sm rounded-4 mb-5 overflow-hidden">
+        <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-plus-circle-dotted me-2"></i>Thiết lập mục tiêu Bẫy Giá mới
+            </h5>
+            <span class="badge bg-warning text-dark px-3 py-2 fw-bold">
+                <i class="bi bi-shield-lock-fill me-1"></i>Tiền cọc: 100.000 đ / lượt (Hoàn cọc nếu sau 1 tháng không có tin)
+            </span>
+        </div>
+        <div class="card-body p-4 bg-white">
+            <form asp-controller="BayGia" asp-action="TaoMucTieu" method="post" id="formTaoBayGia">
+                @Html.AntiForgeryToken()
+                
+                <!-- KHU VỰC VÀ LOẠI BĐS CƠ BẢN -->
+                <div class="row g-3">
+                    <!-- Tỉnh / Thành phố -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-secondary">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                        <select asp-for="FormTao.MaTinh" id="ddlTinhThanhBayGia" class="form-select" required>
+                            <option value="">-- Chọn Tỉnh/Thành --</option>
+                            @if (ViewBag.DanhSachTinhThanh != null)
+                            {
+                                foreach (var t in ViewBag.DanhSachTinhThanh)
+                                {
+                                    <option value="@t.MaTinh" selected="@(t.MaTinh == 1)">@t.TenTinh</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Quận / Huyện -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-secondary">Quận / Huyện</label>
+                        <select asp-for="FormTao.MaQuanHuyen" id="ddlQuanHuyenBayGia" class="form-select">
+                            <option value="">-- Tất cả Quận/Huyện --</option>
+                        </select>
+                    </div>
+
+                    <!-- Phường / Xã -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-secondary">Phường / Xã</label>
+                        <select asp-for="FormTao.MaPhuongXa" id="ddlPhuongXaBayGia" class="form-select">
+                            <option value="">-- Tất cả Phường/Xã --</option>
+                        </select>
+                    </div>
+
+                    <!-- Loại BĐS -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-secondary">Loại Bất động sản <span class="text-danger">*</span></label>
+                        <select asp-for="FormTao.MaLoaiBds" id="ddlLoaiBdsBayGia" class="form-select" required>
+                            <option value="">-- Chọn loại BĐS --</option>
+                            @if (ViewBag.DanhSachLoaiBds != null)
+                            {
+                                foreach (var l in ViewBag.DanhSachLoaiBds)
+                                {
+                                    <option value="@l.MaLoaiBds" data-name="@l.TenLoaiBds">@l.TenLoaiBds</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Hình thức giao dịch -->
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-secondary">Hình thức giao dịch</label>
+                        <select asp-for="FormTao.LoaiGiaoDich" class="form-select">
+                            <option value="BAN">Mua / Bán BĐS</option>
+                            <option value="CHO_THUE">Thuê / Cho thuê</option>
+                        </select>
+                    </div>
+
+                    <!-- Giá tối thiểu (Min) -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small text-secondary">Giá tối thiểu (VNĐ)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">Min</span>
+                            <input asp-for="FormTao.NganSachMinVnd" type="number" step="1000000" class="form-control" placeholder="Ví dụ: 1000000000" />
+                        </div>
+                    </div>
+
+                    <!-- Giá tối đa (Max) -->
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold small text-secondary">Giá trần tối đa mong muốn (VNĐ) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-danger fw-bold">Max</span>
+                            <input asp-for="FormTao.NganSachMaxVnd" type="number" step="1000000" class="form-control fw-bold text-danger" placeholder="Ví dụ: 2500000000" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KHU VỰC THUỘC TÍNH CHI TIẾT (Ẩn khi chưa chọn Loại BĐS) -->
+                <div id="khuVucThuocTinhChiTiet" class="mt-4 p-3 rounded-3 bg-light border" style="display: none;">
+                    
+                    <!-- 1. THUỘC TÍNH CHUNG (Cho cả Đất và Nhà) -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-dark border-bottom pb-2">
+                            <i class="bi bi-sliders me-1 text-primary"></i>Tiêu chí kỹ thuật & Pháp lý cơ bản
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Diện tích tối thiểu (m²)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-aspect-ratio"></i></span>
+                                    <input asp-for="FormTao.DienTichMin" type="number" step="1" min="0" class="form-control" placeholder="Ví dụ: 80, 100..." />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Hướng BĐS</label>
+                                <select asp-for="FormTao.Huong" class="form-select">
+                                    <option value="">-- Tất cả hướng --</option>
+                                    <option value="Đông">Đông</option>
+                                    <option value="Tây">Tây</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Bắc">Bắc</option>
+                                    <option value="Đông Nam">Đông Nam</option>
+                                    <option value="Đông Bắc">Đông Bắc</option>
+                                    <option value="Tây Nam">Tây Nam</option>
+                                    <option value="Tây Bắc">Tây Bắc</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Tình trạng pháp lý</label>
+                                <select asp-for="FormTao.PhapLy" class="form-select">
+                                    <option value="">-- Không yêu cầu --</option>
+                                    <option value="Sổ đỏ/Sổ hồng">Sổ đỏ / Sổ hồng chính chủ</option>
+                                    <option value="Hợp đồng mua bán">Hợp đồng mua bán (HĐMB)</option>
+                                    <option value="Đang chờ sổ">Đang chờ sổ</option>
+                                    <option value="Giấy tờ hợp lệ khác">Giấy tờ hợp lệ khác</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. THUỘC TÍNH RIÊNG CHO ĐẤT (Bảng ChiTietDat) -->
+                    <div id="nhomTieuChiDat" style="display: none;">
+                        <h6 class="fw-bold text-success border-bottom pb-2">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Tiêu chí đặc thù ĐẤT (ChiTietDat)
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Loại đất</label>
+                                <select asp-for="FormTao.LoaiDat" class="form-select input-dat">
+                                    <option value="">-- Tất cả loại đất --</option>
+                                    <option value="Đất thổ cư">Đất thổ cư (ở đô thị/nông thôn)</option>
+                                    <option value="Đất nền dự án">Đất nền phân lô / dự án</option>
+                                    <option value="Đất thương mại dịch vụ">Đất TMDV</option>
+                                    <option value="Đất trồng cây/vườn">Đất vườn / Trồng cây lâu năm</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Mặt tiền tối thiểu (m)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-arrows-expand"></i></span>
+                                    <input asp-for="FormTao.MatTienMinM" type="number" step="0.5" min="0" class="form-control input-dat" placeholder="Ví dụ: 5.0" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Chiều sâu tối thiểu (m)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-arrows-collapse"></i></span>
+                                    <input asp-for="FormTao.ChieuSauMinM" type="number" step="0.5" min="0" class="form-control input-dat" placeholder="Ví dụ: 15.0" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Loại đường tiếp giáp</label>
+                                <select asp-for="FormTao.LoaiDuong" class="form-select input-dat">
+                                    <option value="">-- Tất cả loại đường --</option>
+                                    <option value="Đường nhựa">Đường nhựa</option>
+                                    <option value="Đường bê tông">Đường bê tông</option>
+                                    <option value="Đường rải đá / đất">Đường đất / Đá cấp phối</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Độ rộng đường tối thiểu (m)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-signpost-2"></i></span>
+                                    <input asp-for="FormTao.DoRongDuongMinM" type="number" step="0.5" min="0" class="form-control input-dat" placeholder="Ví dụ: 6.0 (ô tô tránh nhau)" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Hình dáng thế đất</label>
+                                <select asp-for="FormTao.HinhDangDat" class="form-select input-dat">
+                                    <option value="">-- Tất cả hình dáng --</option>
+                                    <option value="Vuông vắn">Vuông vắn</option>
+                                    <option value="Nở hậu">Nở hậu (Tài lộc)</option>
+                                    <option value="Lô góc 2 mặt tiền">Lô góc 2 mặt tiền</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. THUỘC TÍNH RIÊNG CHO NHÀ / CĂN HỘ (Bảng ChiTietNha) -->
+                    <div id="nhomTieuChiNha" style="display: none;">
+                        <h6 class="fw-bold text-info border-bottom pb-2">
+                            <i class="bi bi-building me-1"></i>Tiêu chí đặc thù NHÀ Ở & CĂN HỘ (ChiTietNha)
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Số phòng ngủ tối thiểu</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-door-open"></i></span>
+                                    <input asp-for="FormTao.SoPhongNgu" type="number" min="0" max="20" class="form-control input-nha" placeholder="Ví dụ: 2, 3..." />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Số tầng tối thiểu</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-layers"></i></span>
+                                    <input asp-for="FormTao.SoTangMin" type="number" min="0" max="50" class="form-control input-nha" placeholder="Ví dụ: 2" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Số WC tối thiểu</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-droplet"></i></span>
+                                    <input asp-for="FormTao.SoWcMin" type="number" min="0" max="20" class="form-control input-nha" placeholder="Ví dụ: 2" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Năm xây dựng (Từ năm)</label>
+                                <input asp-for="FormTao.NamXayDungMin" type="number" min="1990" max="2030" class="form-control input-nha" placeholder="Ví dụ: 2020" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Tình trạng nhà</label>
+                                <select asp-for="FormTao.TinhTrangNha" class="form-select input-nha">
+                                    <option value="">-- Tất cả tình trạng --</option>
+                                    <option value="Nhà mới xây">Nhà mới xây dựng</option>
+                                    <option value="Đã qua sử dụng - Đẹp">Đã qua sử dụng còn đẹp</option>
+                                    <option value="Tiện xây mới / sửa chữa">Cần sửa chữa / Tiện xây mới</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-secondary">Nội thất bàn giao</label>
+                                <select asp-for="FormTao.NoiThat" class="form-select input-nha">
+                                    <option value="">-- Không yêu cầu --</option>
+                                    <option value="Đầy đủ nội thất">Đầy đủ nội thất cao cấp</option>
+                                    <option value="Nội thất cơ bản">Nội thất cơ bản</option>
+                                    <option value="Nhà trống">Nhà thô / Nhà trống</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ghi chú bổ sung -->
+                <div class="mt-3">
+                    <label class="form-label fw-semibold small text-secondary">Ghi chú tiêu chí bổ sung (Tùy chọn)</label>
+                    <input asp-for="FormTao.GhiChuTieuChi" class="form-control" placeholder="Ví dụ: Ưu tiên gần trường học, bệnh viện, khu dân trí cao..." />
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <div class="small text-muted">
+                        <i class="bi bi-shield-check text-success me-1"></i>
+                        Hệ thống tạm giữ cọc <strong>100.000 đ</strong> từ ví tài khoản trong <strong>1 tháng</strong>. Nếu sau 1 tháng không có tin phù hợp, hệ thống <strong>hoàn trả 100% cọc</strong> vào ví.
+                    </div>
+                    <button type="submit" class="btn btn-danger px-4 py-2 fw-bold rounded-pill shadow-sm">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>Kích hoạt Bẫy Giá & Giữ cọc (100.000 đ)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Danh sách Mục Tiêu & Kết quả Khớp bên dưới -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="bi bi-card-checklist text-primary me-2"></i>Mục tiêu đang theo dõi của bạn
+        </h4>
+        <span class="badge bg-secondary rounded-pill px-3 py-2">
+            @Model.DanhSachMucTieu.Count mục tiêu
+        </span>
+    </div>
+
+    @if (!Model.DanhSachMucTieu.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 text-center p-5 bg-white">
+            <i class="bi bi-radar fs-1 text-muted mb-3"></i>
+            <h5 class="fw-bold text-secondary">Bạn chưa có mục tiêu bẫy giá nào</h5>
+            <p class="text-muted small mb-0">Hãy điền form ở trên để hệ thống tự động quét và bắt các bất động sản giá hời cho bạn!</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var mt in Model.DanhSachMucTieu)
+            {
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                        <!-- Header mục tiêu -->
+                        <div class="card-header bg-light py-3 px-4 d-flex flex-wrap justify-content-between align-items-center border-bottom">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (mt.TrangThai == "DANG_THEO_DOI" || mt.TrangThai == "ACTIVE")
+                                {
+                                    <span class="badge bg-primary rounded-pill px-3 py-2">
+                                        <i class="bi bi-radar me-1"></i>ĐANG THEO DÕI
+                                    </span>
+                                }
+                                else if (mt.TrangThai == "DA_KHOP_LENH")
+                                {
+                                    <span class="badge bg-success rounded-pill px-3 py-2">
+                                        <i class="bi bi-check-circle-fill me-1"></i>ĐÃ KHỚP LỆNH
+                                    </span>
+                                }
+                                else if (mt.TrangThai == "DA_HOAN_TIEN")
+                                {
+                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>ĐÃ HOÀN TIỀN CỌC
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary rounded-pill px-3 py-2">
+                                        <i class="bi bi-stop-circle me-1"></i>ĐÃ DỪNG
+                                    </span>
+                                }
+
+                                <div>
+                                    <h5 class="fw-bold text-primary mb-0">
+                                        Mục tiêu #@mt.MaMucTieu: @(string.IsNullOrEmpty(mt.TenLoaiBds) ? "Bất động sản" : mt.TenLoaiBds)
+                                        <span class="badge @(mt.LoaiGiaoDich == "BAN" ? "bg-danger" : "bg-success") ms-1">@(mt.LoaiGiaoDich == "BAN" ? "Mua Bán" : "Cho Thuê")</span>
+                                    </h5>
+                                    <small class="text-muted">
+                                        <i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrEmpty(mt.TenPhuongXa) ? (string.IsNullOrEmpty(mt.TenQuanHuyen) ? "Toàn Tỉnh" : mt.TenQuanHuyen) : $"{mt.TenPhuongXa}, {mt.TenQuanHuyen}")
+                                        &bull; <i class="bi bi-clock me-1"></i>Tạo lúc: @(mt.NgayTao?.ToString("dd/MM/yyyy HH:mm") ?? "--")
+                                        @if (mt.NgayHetHan.HasValue)
+                                        {
+                                            <span> &bull; <i class="bi bi-hourglass me-1 text-danger"></i>Hết hạn: @mt.NgayHetHan.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                        }
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                <span class="badge bg-white text-dark border px-3 py-2">
+                                    Khoảng giá: 
+                                    <strong class="text-danger">
+                                        @(mt.NganSachMinVnd.HasValue ? $"{mt.NganSachMinVnd.Value:N0} đ" : "0 đ")
+                                        - 
+                                        @(mt.NganSachMaxVnd.HasValue ? $"{mt.NganSachMaxVnd.Value:N0} đ" : "Không giới hạn")
+                                    </strong>
+                                </span>
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2">
+                                    <i class="bi bi-shield-lock me-1"></i>Cọc: @((mt.PhiDaTruDiem ?? 100000).ToString("N0")) đ
+                                </span>
+                                @if (mt.TrangThai == "DANG_THEO_DOI" || mt.TrangThai == "ACTIVE")
+                                {
+                                    <form asp-controller="BayGia" asp-action="HuyMucTieu" asp-route-id="@mt.MaMucTieu" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn dừng theo dõi mục tiêu này?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                            <i class="bi bi-stop-circle me-1"></i>Dừng
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Danh sách các tiêu chí chi tiết đã chọn hiển thị dạng Pills -->
+                        @if (mt.DanhSachMoTaTieuChi != null && mt.DanhSachMoTaTieuChi.Any())
+                        {
+                            <div class="bg-white px-4 py-2 border-bottom d-flex flex-wrap gap-2 align-items-center">
+                                <span class="small fw-bold text-secondary me-1"><i class="bi bi-funnel me-1"></i>Tiêu chí chi tiết:</span>
+                                @foreach (var tc in mt.DanhSachMoTaTieuChi)
+                                {
+                                    <span class="badge bg-light text-dark border px-2 py-1 small fw-normal">
+                                        @tc
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(mt.ThongBaoHoanTien))
+                        {
+                            <div class="alert alert-warning border-0 rounded-0 m-0 py-2 px-4 small">
+                                <i class="bi bi-info-circle-fill me-1"></i>@mt.ThongBaoHoanTien
+                            </div>
+                        }
+
+                        <!-- Danh sách kết quả khớp mục tiêu bên dưới -->
+                        <div class="card-body p-4 bg-white">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="bi bi-check2-all text-success me-1"></i>Kết quả tìm kiếm khớp tiêu chí
+                                    <span class="badge bg-success-subtle text-success ms-1">@mt.DanhSachKhop.Count tin</span>
+                                </h6>
+                                <small class="text-muted">Nguồn: Tin đăng hệ thống & Lead Mạng xã hội (Facebook)</small>
+                            </div>
+
+                            @if (!mt.DanhSachKhop.Any())
+                            {
+                                <div class="text-center py-4 bg-light rounded-3">
+                                    <i class="bi bi-hourglass-split text-warning fs-3 mb-2 d-block"></i>
+                                    <span class="text-muted small">Hiện chưa có tin đăng nào phù hợp trong tầm giá và tiêu chí này. Hệ thống sẽ tiếp tục theo dõi và hiển thị ngay khi có tin mới!</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="row g-3">
+                                    @foreach (var item in mt.DanhSachKhop)
+                                    {
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card h-100 border rounded-3 p-3 shadow-sm hover-shadow transition">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    @if (item.CoLinkMxh)
+                                                    {
+                                                        <span class="badge bg-primary text-white">
+                                                            <i class="bi bi-facebook me-1"></i>Facebook MXH
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-info text-dark">
+                                                            <i class="bi bi-house-door me-1"></i>Hệ thống Nhà Tốt
+                                                        </span>
+                                                    }
+
+                                                    <span class="fw-bold @(item.GiaHienThi == "Giá: Liên hệ" ? "text-warning" : "text-danger") fs-6">
+                                                        @item.GiaHienThi
+                                                    </span>
+                                                </div>
+
+                                                <h6 class="fw-bold text-dark text-truncate-2 mb-2" style="min-height: 42px;">
+                                                    @item.TieuDe
+                                                </h6>
+
+                                                <div class="small text-muted mb-3">
+                                                    <div><i class="bi bi-geo-alt me-1"></i>@(item.TenKhuVuc ?? "Nghệ An")</div>
+                                                    @if (item.DienTich.HasValue)
+                                                    {
+                                                        <div><i class="bi bi-aspect-ratio me-1"></i>Diện tích: <strong>@item.DienTich.Value.ToString("N0") m²</strong></div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(item.Huong))
+                                                    {
+                                                        <div><i class="bi bi-compass me-1"></i>Hướng: @item.Huong</div>
+                                                    }
+                                                    @if (item.SoPhongNgu.HasValue)
+                                                    {
+                                                        <div><i class="bi bi-door-open me-1"></i>Số PN: @item.SoPhongNgu phòng</div>
+                                                    }
+                                                    @if (item.MatTienM.HasValue)
+                                                    {
+                                                        <div><i class="bi bi-arrows-expand me-1"></i>Mặt tiền: @item.MatTienM.Value.ToString("N1") m</div>
+                                                    }
+                                                    <div><i class="bi bi-person me-1"></i>Người bán: <strong>@item.TenLienHe</strong></div>
+                                                </div>
+
+                                                <div class="mt-auto pt-2 border-top">
+                                                    <!-- Hiển thị SĐT liên hệ trực tiếp -->
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="small text-muted">Số điện thoại:</span>
+                                                        <a href="tel:@item.SoDienThoai" class="fw-bold text-success text-decoration-none">
+                                                            <i class="bi bi-telephone-fill me-1"></i>@item.SoDienThoai
+                                                        </a>
+                                                    </div>
+
+                                                    <!-- Nút mở trực tiếp Link gốc hoặc Profile Facebook với target="_blank" -->
+                                                    @if (item.CoLinkMxh)
+                                                    {
+                                                        <a href="@item.UrlTinGoc" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary w-100 fw-semibold rounded-pill">
+                                                            <i class="bi bi-box-arrow-up-right me-1"></i>Mở bài viết / Facebook gốc
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <a href="@item.UrlTinGoc" target="_blank" class="btn btn-sm btn-primary w-100 fw-semibold rounded-pill">
+                                                            <i class="bi bi-eye me-1"></i>Xem chi tiết tin đăng
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const ddlTinh = document.getElementById('ddlTinhThanhBayGia');
+        const ddlQuan = document.getElementById('ddlQuanHuyenBayGia');
+        const ddlPhuong = document.getElementById('ddlPhuongXaBayGia');
+        const ddlLoaiBds = document.getElementById('ddlLoaiBdsBayGia');
+
+        const khuVucChiTiet = document.getElementById('khuVucThuocTinhChiTiet');
+        const nhomDat = document.getElementById('nhomTieuChiDat');
+        const nhomNha = document.getElementById('nhomTieuChiNha');
+
+        // Hàm xóa giá trị của nhóm
+        function clearInputs(container) {
+            if (!container) return;
+            const inputs = container.querySelectorAll('input, select');
+            inputs.forEach(el => {
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                } else if (el.type === 'checkbox' || el.type === 'radio') {
+                    el.checked = false;
+                } else {
+                    el.value = '';
+                }
+            });
+        }
+
+        // Bắt sự kiện thay đổi Loại BĐS để ẩn/hiện động và xóa trắng nhóm không dùng
+        function handleLoaiBdsChange() {
+            const selectedOpt = ddlLoaiBds.options[ddlLoaiBds.selectedIndex];
+            const tenLoai = (selectedOpt && selectedOpt.getAttribute('data-name')) ? selectedOpt.getAttribute('data-name').trim() : (selectedOpt ? selectedOpt.textContent.trim() : '');
+
+            if (!ddlLoaiBds.value) {
+                // Chưa chọn loại BĐS -> Ẩn toàn bộ khu vực chi tiết
+                khuVucChiTiet.style.display = 'none';
+                nhomDat.style.display = 'none';
+                nhomNha.style.display = 'none';
+                clearInputs(nhomDat);
+                clearInputs(nhomNha);
+                return;
+            }
+
+            // Đã chọn loại BĐS -> Hiện khu vực thuộc tính chi tiết
+            khuVucChiTiet.style.display = 'block';
+
+            // Kiểm tra xem tên loại BĐS có chứa chữ "Đất" (không phân biệt hoa thường)
+            const isDat = tenLoai.toLowerCase().includes('đất');
+
+            if (isDat) {
+                nhomDat.style.display = 'block';
+                nhomNha.style.display = 'none';
+                clearInputs(nhomNha); // Xóa trắng thuộc tính nhà
+            } else {
+                nhomDat.style.display = 'none';
+                nhomNha.style.display = 'block';
+                clearInputs(nhomDat); // Xóa trắng thuộc tính đất
+            }
+        }
+
+        if (ddlLoaiBds) {
+            ddlLoaiBds.addEventListener('change', handleLoaiBdsChange);
+            // Kích hoạt khi tải lại trang (nếu đã có sẵn giá trị)
+            if (ddlLoaiBds.value) {
+                handleLoaiBdsChange();
+            }
+        }
+
+        // Cascade Tỉnh -> Huyện -> Phường
+        async function loadQuanHuyen(maTinh) {
+            ddlQuan.innerHTML = '<option value="">-- Đang tải... --</option>';
+            ddlPhuong.innerHTML = '<option value="">-- Tất cả Phường/Xã --</option>';
+            if (!maTinh) {
+                ddlQuan.innerHTML = '<option value="">-- Tất cả Quận/Huyện --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/Home/GetQuanHuyen?maTinh=${maTinh}`);
+                const data = await res.json();
+                ddlQuan.innerHTML = '<option value="">-- Tất cả Quận/Huyện --</option>';
+                data.forEach(q => {
+                    const opt = document.createElement('option');
+                    opt.value = q.maQuanHuyen;
+                    opt.textContent = q.tenQuanHuyen;
+                    ddlQuan.appendChild(opt);
+                });
+            } catch (e) {
+                ddlQuan.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            }
+        }
+
+        async function loadPhuongXaTheoQuan(maQuanHuyen) {
+            ddlPhuong.innerHTML = '<option value="">-- Đang tải... --</option>';
+            if (!maQuanHuyen) {
+                ddlPhuong.innerHTML = '<option value="">-- Tất cả Phường/Xã --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`/Home/GetPhuongXa?maQuanHuyen=${maQuanHuyen}`);
+                const data = await res.json();
+                ddlPhuong.innerHTML = '<option value="">-- Tất cả Phường/Xã --</option>';
+                data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.maPhuongXa;
+                    opt.textContent = p.tenPhuongXa;
+                    ddlPhuong.appendChild(opt);
+                });
+            } catch (e) {
+                ddlPhuong.innerHTML = '<option value="">-- Lỗi tải dữ liệu --</option>';
+            }
+        }
+
+        if (ddlTinh) {
+            ddlTinh.addEventListener('change', function () {
+                loadQuanHuyen(this.value);
+            });
+            if (ddlTinh.value) {
+                loadQuanHuyen(ddlTinh.value);
+            }
+        }
+
+        if (ddlQuan) {
+            ddlQuan.addEventListener('change', function () {
+                loadPhuongXaTheoQuan(this.value);
+            });
+        }
+    </script>
+}
