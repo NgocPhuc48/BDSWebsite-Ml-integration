@@ -9,6 +9,8 @@ public partial class MucTieuTheoDoiGia
 
     public long? MaNguoiDung { get; set; }
 
+    public int? MaTinh { get; set; }
+
     public int? MaQuanHuyen { get; set; }
 
     public int? MaPhuongXa { get; set; }

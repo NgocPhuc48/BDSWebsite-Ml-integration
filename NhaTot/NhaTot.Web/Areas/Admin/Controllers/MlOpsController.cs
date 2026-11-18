@@ -9,6 +9,15 @@ namespace NhaTot.Web.Areas.Admin.Controllers;
 [Authorize(Roles = "Admin")]
 public class MlOpsController : Controller
 {
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Train([FromServices] NhaTot.Web.Services.ValuationTrainingService training)
+    {
+        try { TempData["TrainingMessage"] = await training.TrainAsync(); }
+        catch (InvalidOperationException ex) { TempData["TrainingMessage"] = ex.Message; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbUpdateException)
+        { TempData["TrainingMessage"] = "Không lưu được mô hình. Kiểm tra quyền ghi artifact và database; mô hình đang dùng được giữ nguyên."; }
+        return RedirectToAction(nameof(Index));
+    }
     private readonly NhaTotDbContext _context;
 
     public MlOpsController(NhaTotDbContext context)
@@ -24,7 +33,7 @@ public class MlOpsController : Controller
             .OrderByDescending(m => m.NgayHuanLuyen)
             .ToListAsync();
 
-        ViewBag.ActiveModel = modelList.FirstOrDefault(m => m.TrangThai == "ACTIVE");
+        ViewBag.ActiveModel = modelList.FirstOrDefault(m => m.TrangThai == "ACTIVE" && m.TenMoHinh == NhaTot.Web.Services.ValuationTrainingService.ModelName);
         ViewBag.TongSoModel = modelList.Count;
 
         return View(modelList);
@@ -61,9 +70,12 @@ public class MlOpsController : Controller
     }
 
     // POST: Admin/MlOps/SetActiveModel/5 (KÃ­ch hoáº¡t phiÃªn báº£n lÃ m Production Model)
-    [HttpPost]
-    public async Task<IActionResult> SetActiveModel(int id)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetActiveModel(int id, [FromServices] NhaTot.Web.Services.ValuationTrainingService training)
     {
+        var candidate = await _context.PhienBanMoHinhs.AsNoTracking().FirstOrDefaultAsync(x => x.MaPhienBan == id);
+        if (candidate == null || await training.LoadAsync(candidate) == null)
+            return Json(new { success = false, message = "Artifact chưa hợp lệ hoặc mô hình chưa đạt ngưỡng đánh giá." });
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {

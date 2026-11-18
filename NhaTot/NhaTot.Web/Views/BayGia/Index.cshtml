@@ -1,4 +1,4 @@
-@model NhaTot.Web.Models.BayGiaIndexViewModel
+﻿@model NhaTot.Web.Models.BayGiaIndexViewModel
 @{
     ViewData["Title"] = "Bẫy Giá Bất Động Sản - Săn tin hời tự động";
 }
@@ -325,10 +325,11 @@
     }
     else
     {
-        <div class="row g-4">
+        <partial name="_BangMucTieu" model="Model" />
+        <div id="targetDetailPanels" class="row g-4">
             @foreach (var mt in Model.DanhSachMucTieu)
             {
-                <div class="col-12">
+                <div id="target-details-@mt.MaMucTieu" class="col-12 collapse @(Model.MucTieuDangXemId == mt.MaMucTieu ? "show" : "")" data-bs-parent="#targetDetailPanels" data-target-detail style="scroll-margin-top:100px">
                     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                         <!-- Header mục tiêu -->
                         <div class="card-header bg-light py-3 px-4 d-flex flex-wrap justify-content-between align-items-center border-bottom">
@@ -375,6 +376,7 @@
                             </div>
                             
                             <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#target-details-@mt.MaMucTieu" aria-controls="target-details-@mt.MaMucTieu" aria-expanded="true">Đóng danh sách</button>
                                 <span class="badge bg-white text-dark border px-3 py-2">
                                     Khoảng giá: 
                                     <strong class="text-danger">
@@ -420,6 +422,7 @@
                         }
 
                         <!-- Danh sách kết quả khớp mục tiêu bên dưới -->
+                        <partial name="_GoiYMxh" model="mt.GoiYTuongDong" />
                         <div class="card-body p-4 bg-white">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="fw-bold text-dark mb-0">
@@ -524,6 +527,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/baygia-targets.js" asp-append-version="true"></script>
     <partial name="_ValidationScriptsPartial" />
     <script>
         const ddlTinh = document.getElementById('ddlTinhThanhBayGia');

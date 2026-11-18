@@ -70,9 +70,10 @@ namespace NhaTot.Web.Models
         public decimal GiaThapNhatVnd { get; set; }
         public decimal GiaCaoNhatVnd { get; set; }
         public decimal DonGiaTrenM2Vnd { get; set; }
-        public double DoTinCayPhanTram { get; set; }
+        public double? DoTinCayPhanTram { get; set; }
+        public int? MaPhienBan { get; set; }
 
-        public string TenMoHinh { get; set; } = "Random Forest Regressor AI v2.5";
+        public string TenMoHinh { get; set; } = "";
         public DateTime ThoiGianThucHien { get; set; } = DateTime.Now;
 
         // Danh sách dự báo giá 6 tháng tiếp theo

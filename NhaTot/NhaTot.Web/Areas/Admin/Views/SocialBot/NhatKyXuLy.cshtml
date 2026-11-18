@@ -1,0 +1,24 @@
+@model IEnumerable<NhaTot.Domain.Entities.LichSuXuLyDuLieu>
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Nhật ký xử lý dữ liệu"; }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h3>Nhật ký xử lý dữ liệu</h3><a asp-action="Index" class="btn btn-outline-secondary">Về SocialBot</a></div>
+<form asp-action="NhatKyXuLy" method="get" class="row g-2 mb-3">
+    <div class="col-md-5"><label for="searchKeyword" class="form-label">Tìm bước xử lý hoặc nội dung</label><input id="searchKeyword" name="searchKeyword" value="@ViewBag.SearchKeyword" class="form-control" /></div>
+    <div class="col-md-4"><label for="ketQua" class="form-label">Kết quả</label><select id="ketQua" name="ketQua" class="form-select">
+        @foreach (var status in new[] { "ALL", "SUCCESS", "PARTIAL", "APPROVED", "NEEDS_REVIEW", "REJECTED", "FAILED" })
+        { <option value="@status" selected="@(ViewBag.CurrentKetQua == status)">@(status == "ALL" ? "Tất cả" : status)</option> }
+    </select></div>
+    <div class="col-md-3 d-flex align-items-end"><button type="submit" class="btn btn-primary">Lọc nhật ký</button></div>
+</form>
+<p class="small text-muted">Hiển thị tối đa 250 bản ghi mới nhất theo bộ lọc.</p>
+<div class="card table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th scope="col">Thời gian</th><th scope="col">Nguồn / Bài</th><th scope="col">Bước xử lý</th><th scope="col">Kết quả</th><th scope="col">Chi tiết</th></tr></thead>
+    <tbody>
+    @foreach (var row in Model)
+    {
+        <tr><td class="text-nowrap">@row.ThoiDiem?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+            <td>@row.MaDuLieuNavigation?.MaNguonNavigation?.TenNguon <a asp-action="Duyet" asp-route-id="@row.MaDuLieu">#@row.MaDuLieu</a></td>
+            <td>@row.BuocXuLy</td><td>@row.KetQua</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">@row.ChiTiet</td></tr>
+    }
+    @if (!Model.Any()) { <tr><td colspan="5" class="text-center text-muted py-4">Chưa có nhật ký theo bộ lọc.</td></tr> }
+    </tbody>
+</table></div>

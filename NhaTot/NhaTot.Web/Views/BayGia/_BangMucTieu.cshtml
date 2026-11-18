@@ -1,0 +1,60 @@
+@model NhaTot.Web.Models.BayGiaIndexViewModel
+<section class="card border-0 shadow-sm rounded-4 mb-4" aria-label="Bảng yêu cầu Bẫy giá">
+    <div class="card-body border-bottom">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label for="targetSearch" class="form-label small fw-semibold">Tìm yêu cầu</label>
+                <input id="targetSearch" type="search" class="form-control" placeholder="Mã yêu cầu, loại BĐS, khu vực..." />
+            </div>
+            <div class="col-md-3">
+                <label for="targetAvailability" class="form-label small fw-semibold">Thông tin phù hợp</label>
+                <select id="targetAvailability" class="form-select"><option value="all">Tất cả</option><option value="available">Đã có tin</option><option value="empty">Chưa có tin</option></select>
+            </div>
+            <div class="col-md-2">
+                <label for="targetSort" class="form-label small fw-semibold">Sắp xếp</label>
+                <select id="targetSort" class="form-select"><option value="newest">Mới nhất</option><option value="count">Nhiều tin nhất</option></select>
+            </div>
+            <div class="col-md-2">
+                <label for="targetPageSize" class="form-label small fw-semibold">Số dòng</label>
+                <select id="targetPageSize" class="form-select"><option>5</option><option selected>10</option><option>25</option><option value="all">Tất cả</option></select>
+            </div>
+        </div>
+        <p class="small text-muted mt-3 mb-0">Mỗi dòng là một yêu cầu riêng. Nhấn số tin hoặc “Chưa có” để xem tiêu chí và danh sách của yêu cầu đó; chọn một tin để xem chi tiết.</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <caption class="visually-hidden">Yêu cầu của bạn và số tin khớp hoặc gợi ý tương đồng hiện đang hiển thị</caption>
+            <thead class="table-light"><tr><th scope="col">Yêu cầu</th><th scope="col">Khu vực</th><th scope="col">Ngân sách</th><th scope="col">Thời hạn / Trạng thái</th><th scope="col">Thông tin phù hợp</th></tr></thead>
+            <tbody id="targetRows">
+            @foreach (var target in Model.DanhSachMucTieu)
+            {
+                var matched = target.DanhSachKhop.DistinctBy(x => (x.NguonTin, x.Id)).Count();
+                var suggestions = target.GoiYTuongDong.DistinctBy(x => (x.NguonTin, x.Id)).Count();
+                var total = target.DanhSachKhop.Concat(target.GoiYTuongDong).DistinctBy(x => (x.NguonTin, x.Id)).Count();
+                var active = target.TrangThai is "DANG_THEO_DOI" or "ACTIVE";
+                var status = target.TrangThai switch { "DANG_THEO_DOI" or "ACTIVE" => "Đang theo dõi", "DA_KHOP_LENH" => "Đã khớp lệnh", "DA_HOAN_TIEN" => "Đã hoàn cọc", _ => "Đã dừng" };
+                <tr data-target-row data-count="@total" data-order="@target.MaMucTieu">
+                    <td><strong>#@target.MaMucTieu · @(target.TenLoaiBds ?? "Bất động sản")</strong><div class="small text-muted">@(target.LoaiGiaoDich == "CHO_THUE" ? "Thuê / Cho thuê" : "Mua / Bán")</div></td>
+                    <td>@(target.TenPhuongXa ?? target.TenQuanHuyen ?? "Toàn tỉnh đã chọn")</td>
+                    <td class="text-nowrap"><div>@((target.NganSachMinVnd ?? 0).ToString("N0")) – @target.NganSachMaxVnd?.ToString("N0") đ</div>
+                        @if (target.TieuChiChiTiet?.DienTichMin is decimal area) { <small class="text-muted">Diện tích từ @area.ToString("N0") m²</small> }
+                    </td>
+                    <td><span class="badge @(active ? "bg-primary-subtle text-primary" : "bg-secondary-subtle text-secondary")">@status</span><div class="small text-muted mt-1">Đến @target.NgayHetHan?.ToString("dd/MM/yyyy")</div></td>
+                    <td>
+                        <button type="button" class="btn btn-sm @(total > 0 ? "btn-success" : "btn-outline-secondary")" data-bs-toggle="collapse" data-bs-target="#target-details-@target.MaMucTieu"
+                            aria-controls="target-details-@target.MaMucTieu" aria-expanded="@(Model.MucTieuDangXemId == target.MaMucTieu ? "true" : "false")">
+                            @(total > 0 ? $"{total} tin · Xem danh sách" : "Chưa có · Xem yêu cầu")
+                        </button>
+                        <div class="small text-muted mt-1">@matched khớp · @suggestions gợi ý</div>
+                    </td>
+                </tr>
+            }
+                <tr id="targetNoResults" hidden><td colspan="5" class="text-center text-muted py-4">Không tìm thấy yêu cầu theo bộ lọc.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span id="targetPageInfo" class="small text-muted" role="status" aria-live="polite"></span>
+        <div class="d-flex gap-2"><button type="button" id="targetPrev" class="btn btn-sm btn-outline-secondary">Trước</button><button type="button" id="targetNext" class="btn btn-sm btn-outline-secondary">Sau</button></div>
+    </div>
+</section>

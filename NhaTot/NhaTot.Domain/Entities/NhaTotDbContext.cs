@@ -6,6 +6,7 @@ namespace NhaTot.Domain.Entities;
 
 public partial class NhaTotDbContext : DbContext
 {
+    public virtual DbSet<LichCaoDuLieu> LichCaoDuLieus { get; set; }
     public NhaTotDbContext()
     {
     }
@@ -581,8 +582,6 @@ public partial class NhaTotDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false);
             entity.Property(e => e.TenPhuongXa).HasMaxLength(120);
-            entity.Property(e => e.ViDo).HasColumnType("decimal(10, 7)");
-            entity.Property(e => e.KinhDo).HasColumnType("decimal(10, 7)");
 
             entity.HasOne(d => d.MaQuanHuyenNavigation).WithMany(p => p.PhuongXas)
                 .HasForeignKey(d => d.MaQuanHuyen)

@@ -1,0 +1,44 @@
+@model IEnumerable<NhaTot.Domain.Entities.DuLieuThuThap>
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Dữ liệu BĐS đã thu thập";
+}
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+    <h3>Dữ liệu BĐS đã thu thập</h3>
+    <a asp-action="Index" class="btn btn-outline-secondary">Về SocialBot</a>
+</div>
+<p class="text-muted">100 bài mới nhất. Thông tin được bóc tách bằng quy tắc và cần kiểm duyệt. Trường trống nghĩa là chưa xác định được; giá là giá rao tổng, không phải giá giao dịch.</p>
+@if (TempData["ExtractionMessage"] is string message)
+{
+    <div class="alert alert-info" role="status">@message</div>
+}
+<form asp-action="ExtractPending" method="post" class="mb-3">
+    <button type="submit" class="btn btn-primary">Bóc tách bài chưa xử lý (tối đa 100)</button>
+</form>
+<div class="card border-0 shadow-sm table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr><th scope="col">Bài viết / Nguồn</th><th scope="col">Loại BĐS</th><th scope="col">Giá rao (VNĐ)</th><th scope="col">Diện tích (m²)</th><th scope="col">Vị trí</th><th scope="col">Trạng thái</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td style="min-width:260px;max-width:460px">
+                    <strong>#@item.MaDuLieu · @item.MaNguonNavigation?.TenNguon</strong>
+                    <details><summary>@item.TieuDe</summary><p style="white-space:pre-wrap">@item.NoiDungGoc</p></details>
+                </td>
+                <td>@(item.LoaiBdsnguon ?? "—")</td>
+                <td>@(item.GiaRaoVnd?.ToString("N0") ?? "—")</td>
+                <td>@(item.DienTich?.ToString("N2") ?? "—")</td>
+                <td>@(item.PhuongXaNguon ?? "—") / @(item.TinhNguon ?? "—")</td>
+                <td><span class="badge bg-secondary">@(item.TrangThaiXuLy switch { "APPROVED" => "Đã duyệt", "REJECTED" => "Đã từ chối", "NEW" => "Chưa xử lý", "EXTRACTED" => "Đã bóc tách · chờ duyệt", "NEEDS_REVIEW" => "Cần kiểm tra", _ => item.TrangThaiXuLy })</span>
+                    <a asp-action="Duyet" asp-route-id="@item.MaDuLieu" class="btn btn-sm btn-outline-primary mt-2">Sửa / Kiểm duyệt</a>
+                </td>
+            </tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu đã lưu.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -13,11 +13,13 @@ namespace NhaTot.Web.Models
         public int? MaPhuongXa { get; set; }
 
         [Required(ErrorMessage = "Vui lòng chọn loại bất động sản.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn loại bất động sản.")]
         public int MaLoaiBds { get; set; }
 
         public string LoaiGiaoDich { get; set; } = "BAN"; // BAN hoặc CHO_THUE
 
         // --- Thuộc tính chung cho cả Đất và Nhà ---
+        [Range(typeof(decimal), "0", "100000000", ParseLimitsInInvariantCulture = true, ErrorMessage = "Diện tích tối thiểu không được âm.")]
         public decimal? DienTichMin { get; set; } // Diện tích tối thiểu (m²)
         public string? Huong { get; set; } // Đông, Tây, Nam, Bắc, Đông Nam...
         public string? PhapLy { get; set; } // Sổ đỏ/Sổ hồng, Hợp đồng mua bán...
@@ -42,7 +44,7 @@ namespace NhaTot.Web.Models
         public decimal? NganSachMinVnd { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập giá tối đa mong muốn.")]
-        [Range(1, double.MaxValue, ErrorMessage = "Giá mong muốn phải lớn hơn 0.")]
+        [Range(typeof(decimal), "1", "9999999999999999.99", ParseLimitsInInvariantCulture = true, ErrorMessage = "Giá mong muốn phải lớn hơn 0 và nằm trong giới hạn lưu trữ.")]
         public decimal NganSachMaxVnd { get; set; }
 
         public string? GhiChuTieuChi { get; set; }
@@ -116,6 +118,7 @@ namespace NhaTot.Web.Models
         public List<string> DanhSachMoTaTieuChi { get; set; } = new List<string>();
 
         public List<KetQuaKhopItemDto> DanhSachKhop { get; set; } = new List<KetQuaKhopItemDto>();
+        public List<KetQuaKhopItemDto> GoiYTuongDong { get; set; } = new();
     }
 
     public class BayGiaIndexViewModel

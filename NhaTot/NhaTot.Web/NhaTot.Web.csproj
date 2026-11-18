@@ -2,6 +2,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NhaTot.Domain\NhaTot.Domain.csproj" />
+    <EmbeddedResource Include="..\tool-cao-data\sql\003_raw_posts.sql" LogicalName="SocialBot.Sql.003" />
+    <EmbeddedResource Include="..\tool-cao-data\sql\005_review_posts.sql" LogicalName="SocialBot.Sql.005" />
+    <EmbeddedResource Include="..\tool-cao-data\sql\006_crawl_schedule.sql" LogicalName="SocialBot.Sql.006" />
+    <EmbeddedResource Include="..\tool-cao-data\sql\007_apify_settings.sql" LogicalName="SocialBot.Sql.007" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="App_Data\**" />
+    <None Remove="App_Data\**" />
   </ItemGroup>
 
   <ItemGroup>

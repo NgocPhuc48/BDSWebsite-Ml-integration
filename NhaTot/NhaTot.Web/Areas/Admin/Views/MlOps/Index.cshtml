@@ -9,11 +9,17 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
         <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-cpu text-primary me-2"></i>MLOps - Registry & Đánh giá Mô hình AI</h3>
-        <p class="text-muted mb-0">Quản lý các phiên bản mô hình Học máy (XGBoost / Random Forest) và đo lường chỉ số sai số định giá</p>
+        <p class="text-muted mb-0">Huấn luyện Ridge, quản lý phiên bản và đánh giá sai số trên dữ liệu độc lập theo thời gian</p>
     </div>
 </div>
 
 <!-- Active Model Hero Card -->
+@if (TempData["TrainingMessage"] is string trainingMessage)
+{ <div class="alert alert-info" role="status">@trainingMessage</div> }
+<form asp-action="Train" method="post" class="mb-4">
+    <p class="text-muted">Huấn luyện Ridge trên tin bán đã duyệt. Cần tối thiểu 60 mẫu độc lập và đủ ngày để tách train/calibration/test. Chỉ tự kích hoạt khi MAE tốt hơn giá so sánh và MAPE ≤35%.</p>
+    <button type="submit" class="btn btn-primary">Huấn luyện và áp dụng nếu đạt chất lượng</button>
+</form>
 @if (activeModel != null)
 {
     <div class="card border-0 shadow-sm bg-primary text-white mb-4">
@@ -187,7 +193,7 @@
         async function setActiveModel(id) {
             if (confirm(`Bạn có chắc chắn muốn chuyển Phiên bản #${id} làm Production Model chính cho AI Valuation Engine?`)) {
                 try {
-                    const res = await fetch(`/Admin/MlOps/SetActiveModel/${id}`, { method: 'POST' });
+                    const res = await fetch(`/Admin/MlOps/SetActiveModel/${id}`, { method: 'POST', headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value } });
                     const result = await res.json();
                     if (result.success) { 
                         location.reload(); 

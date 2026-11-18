@@ -1,4 +1,4 @@
-@model IEnumerable<NhaTot.Domain.Entities.NguonDuLieu>
+﻿@model IEnumerable<NhaTot.Domain.Entities.NguonDuLieu>
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Quản lý Nguồn Cào Social Lead Bot";
@@ -11,6 +11,9 @@
         <p class="text-muted mb-0">Quản lý cấu hình Bot cào tự động từ Facebook Group, Zalo và website BĐS</p>
     </div>
     <div class="d-flex gap-2">
+        <a asp-action="KetNoi" class="btn btn-primary">Kết nối Apify</a>
+        <a asp-action="DuLieu" class="btn btn-outline-primary">Dữ liệu đã thu thập</a>
+        <a asp-action="LichCao" class="btn btn-outline-primary">Lịch cào tự động</a>
         <a href="/Admin/SocialBot/NhatKyXuLy" class="btn btn-outline-info shadow-sm">
             <i class="bi bi-journal-code me-1"></i> Nhật ký Bóc tách ETL/NLP
         </a>
@@ -57,6 +60,64 @@
                 <div class="fs-1 opacity-50"><i class="bi bi-database-check"></i></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Thu thập thủ công: giao diện chuẩn bị cho tích hợp Apify -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+        <section class="card border-0 shadow-sm h-100" aria-labelledby="crawlHeading">
+            <div class="card-body">
+                <h5 id="crawlHeading" class="fw-bold mb-3"><i class="bi bi-search me-2 text-primary"></i>Thu thập bài Facebook</h5>
+                @Html.AntiForgeryToken()
+                <div class="alert alert-info small">Thu thập từ các nguồn Facebook công khai đang bật bên dưới, không cần từ khóa. Chỉ bật nguồn chuyên về bất động sản.</div>
+                <div class="mb-3">
+                    <label for="crawlInterval" class="form-label fw-semibold">Thời gian đăng bài</label>
+                    <select id="crawlInterval" class="form-select">
+                        <option value="1">24 giờ qua</option>
+                        <option value="7">7 ngày qua</option>
+                        <option value="30">30 ngày qua</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="crawlLimit" class="form-label fw-semibold">Số bài tối đa mỗi nguồn</label>
+                    <input id="crawlLimit" type="number" class="form-control" value="10" min="1" max="100" step="1" />
+                </div>
+                <div class="d-flex gap-2" aria-describedby="crawlConnectionStatus">
+                    <button id="crawlStart" type="button" class="btn btn-primary flex-grow-1"><i class="bi bi-play-fill me-1"></i>Bắt đầu cào</button>
+                    <button id="crawlStop" type="button" class="btn btn-outline-danger" disabled><i class="bi bi-stop-fill me-1"></i>Dừng</button>
+                </div>
+                <p id="crawlConnectionStatus" class="small text-muted mt-3 mb-0">Sẵn sàng thu thập từ danh sách nguồn.</p>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-lg-8">
+        <section class="card border-0 shadow-sm h-100" aria-labelledby="crawlResultsHeading">
+            <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
+                <h5 id="crawlResultsHeading" class="fw-bold mb-0">Kết quả phiên thu thập <span id="crawlResultCount" class="badge bg-secondary ms-1">0 bài</span></h5>
+                <div class="d-flex gap-2">
+                    <button id="crawlSave" type="button" class="btn btn-sm btn-primary" disabled><i class="bi bi-database-add me-1"></i>Lưu vào database</button>
+                    <button id="crawlExport" type="button" class="btn btn-sm btn-outline-success" disabled><i class="bi bi-filetype-csv me-1"></i>Xuất CSV</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <caption class="visually-hidden">Danh sách bài viết Facebook của phiên thu thập hiện tại</caption>
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Thời gian đăng</th>
+                            <th scope="col">Nội dung</th>
+                            <th scope="col">Tác giả</th>
+                            <th scope="col">Tương tác</th>
+                            <th scope="col">Bài gốc</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crawlResultsBody">
+                        <tr><td colspan="5" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Chưa có kết quả thu thập.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 </div>
 
@@ -119,7 +180,7 @@
                                     <button class="btn btn-sm @(item.TrangThai == "ACTIVE" ? "btn-outline-danger" : "btn-outline-success") me-1" onclick="toggleSource(@item.MaNguon)">
                                         <i class="bi @(item.TrangThai == "ACTIVE" ? "bi-pause-fill" : "bi-play-fill")"></i> @(item.TrangThai == "ACTIVE" ? "Tắt" : "Bật")
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="confirmDelete(@item.MaNguon, '@item.TenNguon')">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-source-name="@item.TenNguon" onclick="confirmDelete(@item.MaNguon, this.dataset.sourceName)">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -166,7 +227,7 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Ghi chú / Giấy phép API</label>
-                    <textarea id="GhiChuGiayPhep" class="form-control" rows="2" placeholder="Cấu hình Token hoặc ghi chú ghi nhận nguồn..."></textarea>
+                    <textarea id="GhiChuGiayPhep" class="form-control" rows="2" placeholder="Ghi chú ghi nhận nguồn (token nhập tại Kết nối Apify)..."></textarea>
                 </div>
             </div>
             <div class="modal-footer border-0">
@@ -180,6 +241,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/socialbot-crawl.js" asp-append-version="true"></script>
     <script>
         const sourceModal = new bootstrap.Modal(document.getElementById('sourceModal'));
 
@@ -212,7 +274,7 @@
 
         async function toggleSource(id) {
             try {
-                const res = await fetch(`/Admin/SocialBot/ToggleSource/${id}`, { method: 'POST' });
+                const res = await fetch(`/Admin/SocialBot/ToggleSource/${id}`, { method: 'POST', headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value } });
                 const result = await res.json();
                 if (result.success) {
                     location.reload();
@@ -237,7 +299,7 @@
             try {
                 const res = await fetch('/Admin/SocialBot/SaveSource', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
                     body: JSON.stringify(payload)
                 });
                 const result = await res.json();
@@ -251,7 +313,7 @@
         async function confirmDelete(id, name) {
             if (confirm(`Bạn có chắc chắn muốn xóa nguồn cào "${name}"?`)) {
                 try {
-                    const res = await fetch(`/Admin/SocialBot/DeleteSource/${id}`, { method: 'POST' });
+                    const res = await fetch(`/Admin/SocialBot/DeleteSource/${id}`, { method: 'POST', headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value } });
                     const result = await res.json();
                     if (result.success) {
                         const row = document.getElementById(`row-${id}`);

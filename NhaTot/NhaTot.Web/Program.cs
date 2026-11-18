@@ -2,11 +2,25 @@ using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
 using NhaTot.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 var builder = WebApplication.CreateBuilder(args);
+var protection = builder.Services.AddDataProtection().SetApplicationName("NhaTot")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys")));
+if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 
 // Đăng ký dịch vụ MVC và AI Định giá
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IAiDinhGiaService, AiDinhGiaService>();
+builder.Services.AddScoped<ValuationTrainingService>();
+builder.Services.AddHostedService<ValuationTrainingWorker>();
+builder.Services.AddHttpClient<ApifyCrawlService>();
+builder.Services.AddScoped<ApifyTokenStore>();
+builder.Services.AddHttpClient("ApifyConnectionCheck", client => client.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<CrawlImportService>();
+builder.Services.AddScoped<CrawlExtractionService>();
+builder.Services.AddScoped<CrawlSuggestionService>();
+builder.Services.AddHostedService<CrawlScheduleWorker>();
+builder.Services.AddMemoryCache();
 
 // Đăng ký DbContext kết nối SQL Server
 builder.Services.AddDbContext<NhaTotDbContext>(options =>
@@ -21,6 +35,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
     });
 var app = builder.Build();
+// Cập nhật trước khi nhận request hoặc khởi động worker; chỉ thêm schema và chạy mỗi phiên bản một lần.
+await SocialBotSchemaInitializer.InitializeAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

@@ -15,10 +15,6 @@ public partial class PhuongXa
 
     public bool? TrangThai { get; set; }
 
-    public decimal? ViDo { get; set; }
-
-    public decimal? KinhDo { get; set; }
-
     public virtual ICollection<BatDongSan> BatDongSans { get; set; } = new List<BatDongSan>();
 
     public virtual ICollection<LeadKhachHangNhuCau> LeadKhachHangNhuCaus { get; set; } = new List<LeadKhachHangNhuCau>();

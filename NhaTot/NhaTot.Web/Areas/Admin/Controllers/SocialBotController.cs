@@ -7,7 +7,7 @@ namespace NhaTot.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Authorize(Roles = "Admin")]
-public class SocialBotController : Controller
+public partial class SocialBotController : Controller
 {
     private readonly NhaTotDbContext _context;
 
@@ -43,7 +43,7 @@ public class SocialBotController : Controller
     }
 
     // POST: Admin/SocialBot/ToggleSource/5 (Báº­t / Táº¯t Bot cÃ o tá»± Ä‘á»™ng)
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleSource(int id)
     {
         try
@@ -69,7 +69,7 @@ public class SocialBotController : Controller
     }
 
     // POST: Admin/SocialBot/SaveSource (ThÃªm má»›i / Cáº­p nháº­t Nguá»“n cÃ o)
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveSource([FromBody] NguonDuLieu model)
     {
         if (string.IsNullOrWhiteSpace(model.TenNguon))
@@ -108,7 +108,7 @@ public class SocialBotController : Controller
     }
 
     // POST: Admin/SocialBot/DeleteSource/5 (XÃ³a nguá»“n cÃ o)
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteSource(int id)
     {
         try

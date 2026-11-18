@@ -1,0 +1,23 @@
+# Khóa mã hóa cục bộ, không đưa vào source control.
+**/App_Data/
+
+# Build/cache và công cụ phát triển
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vs/
+**/*.user
+**/*.suo
+.publish-web/
+
+# Cấu hình và token riêng trên từng máy
+**/NhaTot.Web/appsettings.json
+**/appsettings.Local.json
+**/.env
+**/.env.*
+!**/.env.example
+**/api.txt
+**/*.pfx
+**/*.p12
+**/*.key

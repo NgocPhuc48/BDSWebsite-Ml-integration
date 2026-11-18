@@ -15,6 +15,15 @@ public partial class DuLieuThuThap
 
     public string? TieuDe { get; set; }
 
+    public string? NoiDungGoc { get; set; }
+
+    public string? DuLieuGocJson { get; set; }
+
+    public int? MaLoaiBdsDaDuyet { get; set; }
+    public int? MaPhuongXaDaDuyet { get; set; }
+    public string? LoaiGiaoDichDaDuyet { get; set; }
+    public string? LoaiNoiDungDaDuyet { get; set; }
+
     public string? LoaiBdsnguon { get; set; }
 
     public string? TinhNguon { get; set; }

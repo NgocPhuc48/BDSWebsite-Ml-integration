@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -16,11 +16,13 @@ namespace NhaTot.Web.Controllers
     public class BayGiaController : Controller
     {
         private readonly NhaTotDbContext _context;
+        private readonly NhaTot.Web.Services.CrawlSuggestionService _suggestions;
         private const decimal TIEN_COC_BAY_GIA = 100000m; // 100.000 đ tạm giữ cọc cho mỗi mục tiêu theo dõi bẫy giá
 
-        public BayGiaController(NhaTotDbContext context)
+        public BayGiaController(NhaTotDbContext context, NhaTot.Web.Services.CrawlSuggestionService suggestions)
         {
             _context = context;
+            _suggestions = suggestions;
         }
 
         private long GetCurrentUserId()
@@ -170,6 +172,12 @@ namespace NhaTot.Web.Controllers
 
                 string loaiGiaoDich = m.LoaiGiaoDich ?? "BAN";
                 var danhSachKhop = await TimKiemKetQuaKhopAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds, loaiGiaoDich, minGia, maxGia, tieuChiDetail);
+                var goiY = await _suggestions.FindAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds,
+                    loaiGiaoDich, minGia, maxGia, tieuChiDetail.DienTichMin, m.MaTinh);
+                var tinDangTuongDong = await _suggestions.FindListingsAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds,
+                    loaiGiaoDich, minGia, maxGia, tieuChiDetail.DienTichMin, m.MaTinh,
+                    danhSachKhop.Where(x => x.NguonTin == "TinDang").Select(x => x.Id).ToArray());
+                goiY.AddRange(tinDangTuongDong);
 
                 bool daHetHan = m.NgayHetHan.HasValue && now >= m.NgayHetHan.Value;
                 string trangThaiHienTai = m.TrangThai ?? "DANG_THEO_DOI";
@@ -236,7 +244,8 @@ namespace NhaTot.Web.Controllers
                     ThongBaoHoanTien = thongBaoHoanTien,
                     TieuChiChiTiet = tieuChiDetail,
                     DanhSachMoTaTieuChi = moTaList,
-                    DanhSachKhop = danhSachKhop
+                    DanhSachKhop = danhSachKhop,
+                    GoiYTuongDong = goiY.OrderByDescending(x => x.NgayDang).ToList()
                 };
 
                 viewModel.DanhSachMucTieu.Add(itemDto);
@@ -254,57 +263,9 @@ namespace NhaTot.Web.Controllers
         // POST: /BayGia/TaoMucTieu
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> TaoMucTieu(TaoMucTieuBayGiaViewModel model)
+        public async Task<IActionResult> TaoMucTieu([Bind(Prefix = "FormTao")] TaoMucTieuBayGiaViewModel model)
         {
             long userId = GetCurrentUserId();
-
-            // Nếu model chưa bind được do prefix FormTao, thử bind từ Request.Form
-            if (model.MaLoaiBds <= 0 && Request.Form.ContainsKey("FormTao.MaLoaiBds"))
-            {
-                if (int.TryParse(Request.Form["FormTao.MaLoaiBds"], out var parsedLoaiBds)) model.MaLoaiBds = parsedLoaiBds;
-                if (int.TryParse(Request.Form["FormTao.MaTinh"], out var parsedTinh)) model.MaTinh = parsedTinh;
-                if (int.TryParse(Request.Form["FormTao.MaQuanHuyen"], out var parsedQuan)) model.MaQuanHuyen = parsedQuan;
-                if (int.TryParse(Request.Form["FormTao.MaPhuongXa"], out var parsedPhuong)) model.MaPhuongXa = parsedPhuong;
-                if (decimal.TryParse(Request.Form["FormTao.NganSachMaxVnd"], out var parsedMax)) model.NganSachMaxVnd = parsedMax;
-                if (decimal.TryParse(Request.Form["FormTao.NganSachMinVnd"], out var parsedMin)) model.NganSachMinVnd = parsedMin;
-                if (Request.Form.ContainsKey("FormTao.LoaiGiaoDich")) model.LoaiGiaoDich = Request.Form["FormTao.LoaiGiaoDich"].ToString();
-            }
-
-            // Kiểm tra loại BĐS để xóa validation của nhóm không liên quan
-            var loaiBdsObj = await _context.LoaiBds.FindAsync(model.MaLoaiBds);
-            bool isDat = loaiBdsObj != null && (loaiBdsObj.TenLoaiBds?.IndexOf("Đất", StringComparison.OrdinalIgnoreCase) >= 0
-                                             || loaiBdsObj.TenLoaiBds?.IndexOf("Dat", StringComparison.OrdinalIgnoreCase) >= 0);
-
-            // Xóa lỗi validation cho các trường của nhóm bị ẩn hoặc có thể có prefix FormTao
-            var datKeys = new[] { "LoaiDat", "MatTienMinM", "ChieuSauMinM", "LoaiDuong", "DoRongDuongMinM", "HinhDangDat" };
-            var nhaKeys = new[] { "SoTangMin", "SoPhongNgu", "SoWcMin", "NamXayDungMin", "TinhTrangNha", "NoiThat" };
-
-            if (isDat)
-            {
-                foreach (var k in nhaKeys)
-                {
-                    ModelState.Remove(k);
-                    ModelState.Remove($"FormTao.{k}");
-                }
-            }
-            else
-            {
-                foreach (var k in datKeys)
-                {
-                    ModelState.Remove(k);
-                    ModelState.Remove($"FormTao.{k}");
-                }
-            }
-
-            // Xóa lỗi cho MaTinh, MaQuanHuyen, MaPhuongXa nếu có
-            ModelState.Remove("MaTinh");
-            ModelState.Remove("FormTao.MaTinh");
-            ModelState.Remove("MaQuanHuyen");
-            ModelState.Remove("FormTao.MaQuanHuyen");
-            ModelState.Remove("MaPhuongXa");
-            ModelState.Remove("FormTao.MaPhuongXa");
-            ModelState.Remove("GhiChuTieuChi");
-            ModelState.Remove("FormTao.GhiChuTieuChi");
 
             if (!ModelState.IsValid)
             {
@@ -317,6 +278,25 @@ namespace NhaTot.Web.Controllers
                 TempData["ErrorMessage"] = $"Vui lòng kiểm tra lại thông tin: {errorDetail}";
                 return RedirectToAction("Index");
             }
+
+            if (userId <= 0) return Forbid();
+            if (model.NganSachMinVnd < 0 || model.NganSachMinVnd > model.NganSachMaxVnd
+                || model.LoaiGiaoDich is not ("BAN" or "CHO_THUE"))
+            {
+                TempData["ErrorMessage"] = "Khoảng giá hoặc loại giao dịch không hợp lệ.";
+                return RedirectToAction(nameof(Index));
+            }
+            if (!await _context.LoaiBds.AnyAsync(x => x.MaLoaiBds == model.MaLoaiBds && x.TrangThai == true)
+                || !await _context.TinhThanhs.AnyAsync(x => x.MaTinh == model.MaTinh && x.TrangThai == true)
+                || (model.MaQuanHuyen.HasValue && !await _context.QuanHuyens.AnyAsync(x => x.MaQuanHuyen == model.MaQuanHuyen && x.MaTinh == model.MaTinh && x.TrangThai == true))
+                || (model.MaPhuongXa.HasValue && !await _context.PhuongXas.AnyAsync(x => x.MaPhuongXa == model.MaPhuongXa && x.TrangThai == true
+                    && x.MaQuanHuyenNavigation != null && x.MaQuanHuyenNavigation.MaTinh == model.MaTinh
+                    && (!model.MaQuanHuyen.HasValue || x.MaQuanHuyen == model.MaQuanHuyen))))
+            {
+                TempData["ErrorMessage"] = "Vui lòng chọn loại BĐS và địa phương hợp lệ, cùng tỉnh/huyện.";
+                return RedirectToAction(nameof(Index));
+            }
+            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             // 1. Kiểm tra số dư ví tài khoản
             var vi = await LayHoacTaoViAsync(userId);
@@ -354,6 +334,7 @@ namespace NhaTot.Web.Controllers
             var mucTieu = new MucTieuTheoDoiGia
             {
                 MaNguoiDung = userId,
+                MaTinh = model.MaTinh,
                 MaQuanHuyen = maQuanHuyen,
                 MaPhuongXa = model.MaPhuongXa,
                 MaLoaiBds = model.MaLoaiBds,
@@ -406,6 +387,7 @@ namespace NhaTot.Web.Controllers
             _context.NhuCauTimKiems.Add(nhuCau);
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             TempData["SuccessMessage"] = $"Kích hoạt Bẫy Giá thành công! Đã tạm giữ cọc {TIEN_COC_BAY_GIA:N0} đ từ ví. Thời hạn theo dõi: 1 tháng.";
             return RedirectToAction("Index", new { targetId = mucTieu.MaMucTieu });
@@ -579,6 +561,7 @@ namespace NhaTot.Web.Controllers
             var leadQuery = _context.LeadKhachHangNhuCaus
                 .Include(l => l.MaDuLieuNavigation)
                 .Include(l => l.MaPhuongXaNavigation)
+                .Where(l => l.MaDuLieuNavigation == null || l.MaDuLieuNavigation.DuLieuGocJson == null)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(loaiGiaoDich))

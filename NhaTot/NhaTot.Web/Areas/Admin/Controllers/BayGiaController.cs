@@ -215,6 +215,7 @@ namespace NhaTot.Web.Areas.Admin.Controllers
             var leadQuery = _context.LeadKhachHangNhuCaus
                 .Include(l => l.MaDuLieuNavigation)
                 .Include(l => l.MaPhuongXaNavigation)
+                .Where(l => l.MaDuLieuNavigation == null || l.MaDuLieuNavigation.DuLieuGocJson == null)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(loaiGiaoDich))
