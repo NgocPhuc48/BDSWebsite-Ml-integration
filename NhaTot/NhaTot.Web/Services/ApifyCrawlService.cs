@@ -8,21 +8,34 @@ public sealed class ApifyCrawlService(HttpClient client, ApifyTokenStore tokens)
 {
     private async Task<JsonElement> SendAsync(HttpMethod method, string path, object? body, CancellationToken ct)
     {
-        var token = await tokens.GetAsync(ct);
-        if (string.IsNullOrWhiteSpace(token))
-            throw new InvalidOperationException("Chưa có token. Mở Admin → SocialBot → Kết nối Apify để nhập token.");
-        using var request = new HttpRequestMessage(method, "https://api.apify.com/v2/" + path);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        if (body != null) request.Content = JsonContent.Create(body);
-        using var response = await client.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
+        var allTokens = await tokens.GetAllAsync(ct);
+        if (allTokens.Count == 0)
+            throw new InvalidOperationException("Chưa có token. Mở Admin → SocialBot → Kết nối Apify để nhập token hoặc kiểm tra file ToolCaoData/api.txt.");
+
+        string? lastError = null;
+        for (var i = 0; i < allTokens.Count; i++)
         {
+            using var request = new HttpRequestMessage(method, "https://api.apify.com/v2/" + path);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", allTokens[i]);
+            if (body != null) request.Content = JsonContent.Create(body);
+            using var response = await client.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+                return json.RootElement.Clone();
+            }
+
             var errBody = await response.Content.ReadAsStringAsync(ct);
             var detail = errBody.Length > 300 ? errBody[..300] : errBody;
-            throw new InvalidOperationException($"Apify trả lỗi HTTP {(int)response.StatusCode}: {detail}");
+            lastError = $"Apify trả lỗi HTTP {(int)response.StatusCode}: {detail}";
+
+            // Nếu lỗi do token hết hạn / hết quota (401, 402, 403), tự động chuyển sang token kế tiếp trong api.txt
+            var statusCode = (int)response.StatusCode;
+            if (statusCode is not (401 or 402 or 403) || i == allTokens.Count - 1)
+                throw new InvalidOperationException(lastError);
         }
-        using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-        return json.RootElement.Clone();
+
+        throw new InvalidOperationException(lastError ?? "Không gọi được Apify.");
     }
 
     public async Task<JsonElement> StartAsync(string[] urls, int limit, int days, CancellationToken ct)

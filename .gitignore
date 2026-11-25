@@ -37,8 +37,6 @@ Thumbs.db
 **/.env
 **/.env.*
 !**/.env.example
-**/api.txt
-**/ToolCaoData/api.txt
 **/*.pfx
 **/*.p12
 **/*.key
