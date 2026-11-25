@@ -1,0 +1,1 @@
+dotnet run --project "c:\Users\HP\Downloads\BDSWebsite-Ml-integration\BDSWebsite-Ml-integration\NhaTot\NhaTot.Web\NhaTot.Web.csproj"

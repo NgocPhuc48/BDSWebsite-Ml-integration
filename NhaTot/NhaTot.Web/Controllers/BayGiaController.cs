@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -586,7 +586,10 @@ namespace NhaTot.Web.Controllers
             foreach (var l in leads)
             {
                 var tinNguon = l.MaDuLieuNavigation;
-                decimal? giaNguon = tinNguon?.GiaRaoVnd;
+                decimal? giaNguon = tinNguon?.GiaRaoVnd
+                    ?? (tinNguon?.GiaMinVnd.HasValue == true && tinNguon?.GiaMaxVnd.HasValue == true
+                        ? (tinNguon.GiaMinVnd.Value + tinNguon.GiaMaxVnd.Value) / 2m
+                        : (tinNguon?.GiaMinVnd ?? tinNguon?.GiaMaxVnd));
 
                 // Lọc theo khoảng giá: GiaRaoVnd <= GiaMongMuonVND * 1.1 HOẶC NULL/<= 0 -> Giá: Liên hệ
                 if (nguongGiaTran.HasValue)

@@ -44,7 +44,7 @@ if (args.Contains("--database") || args.Contains("--train"))
     var config = new ConfigurationBuilder().SetBasePath(webRoot).AddJsonFile("appsettings.json")
         .AddJsonFile("appsettings.Development.json", optional: true).AddEnvironmentVariables().Build();
     var services = new ServiceCollection();
-    services.AddDbContext<NhaTotDbContext>(options => options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+    services.AddDbContext<NhaTotDbContext>(options => options.UseMySql(config.GetConnectionString("DefaultConnection")!, new MySqlServerVersion(new Version(8, 0, 46))));
     services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(new TrainingEnvironment(webRoot));
     services.AddScoped<ValuationTrainingService>();
     services.AddScoped<IAiDinhGiaService, AiDinhGiaService>();

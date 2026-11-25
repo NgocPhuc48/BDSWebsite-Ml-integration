@@ -24,14 +24,8 @@ public sealed class CrawlScheduleWorker(IServiceScopeFactory scopes, ILogger<Cra
         var db = scope.ServiceProvider.GetRequiredService<NhaTotDbContext>();
         var apify = scope.ServiceProvider.GetRequiredService<ApifyCrawlService>();
         await db.Database.OpenConnectionAsync(ct);
-        var acquired = false;
         try
         {
-            // SQL Server giữ khóa theo connection; nhiều instance không tạo phiên lịch trùng nhau.
-            using var command = db.Database.GetDbConnection().CreateCommand();
-            command.CommandText = "DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource='NhaTot.CrawlSchedule', @LockMode='Exclusive', @LockOwner='Session', @LockTimeout=0; SELECT @r;";
-            if (Convert.ToInt32(await command.ExecuteScalarAsync(ct)) < 0) return;
-            acquired = true;
             var schedule = await db.LichCaoDuLieus.SingleOrDefaultAsync(x => x.Id == 1, ct);
             if (schedule == null) return;
             if (!string.IsNullOrEmpty(schedule.ActiveRunId))
@@ -102,11 +96,7 @@ public sealed class CrawlScheduleWorker(IServiceScopeFactory scopes, ILogger<Cra
         }
         finally
         {
-            // Chủ động trả khóa trước khi connection quay về pool.
-            using var release = db.Database.GetDbConnection().CreateCommand();
-            release.CommandText = "EXEC sys.sp_releaseapplock @Resource='NhaTot.CrawlSchedule', @LockOwner='Session';";
-            try { if (acquired) await release.ExecuteNonQueryAsync(CancellationToken.None); }
-            finally { await db.Database.CloseConnectionAsync(); }
+            await db.Database.CloseConnectionAsync();
         }
     }
 

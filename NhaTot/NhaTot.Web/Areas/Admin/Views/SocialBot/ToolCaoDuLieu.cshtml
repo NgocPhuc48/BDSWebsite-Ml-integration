@@ -1,0 +1,185 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Tool Cào Dữ Liệu Facebook";
+}
+
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-window-stack text-primary me-2"></i>Tool Cào Dữ Liệu Facebook</h3>
+        <p class="text-muted mb-0">Thu thập bài viết bất động sản từ Facebook &amp; Group công khai theo từ khóa qua Apify</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="KetNoi" class="btn btn-outline-primary">Kết nối Apify</a>
+        <a asp-action="DuLieu" class="btn btn-outline-primary">Dữ liệu đã thu thập</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Về SocialBot</a>
+    </div>
+</div>
+
+<!-- Giao diện thu thập dữ liệu Facebook -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-4">
+        <section class="card border-0 shadow-sm h-100" aria-labelledby="crawlHeading">
+            <div class="card-body">
+                @Html.AntiForgeryToken()
+
+                <!-- Chuyển đổi chế độ cào -->
+                <ul class="nav nav-pills nav-fill bg-light rounded p-1 mb-3" id="crawlModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active btn-sm fw-semibold py-2" id="tab-group-btn"
+                                data-bs-toggle="pill" data-bs-target="#pane-group" type="button" role="tab"
+                                aria-controls="pane-group" aria-selected="true">
+                            <i class="bi bi-people-fill me-1"></i>Tìm Group &amp; Bài viết
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm fw-semibold py-2" id="tab-keyword-btn"
+                                data-bs-toggle="pill" data-bs-target="#pane-keyword" type="button" role="tab"
+                                aria-controls="pane-keyword" aria-selected="false">
+                            <i class="bi bi-search me-1"></i>Tìm theo từ khóa
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- TAB 1: Tìm Group theo từ khóa & lấy bài trong Group (calm_builder/facebook-groups-scraper) -->
+                    <div class="tab-pane fade show active" id="pane-group" role="tabpanel" aria-labelledby="tab-group-btn">
+                        <h5 id="crawlGroupHeading" class="fw-bold mb-1">
+                            <i class="bi bi-people me-2 text-primary"></i>Quét Group Facebook theo từ khóa
+                        </h5>
+                        <p class="text-muted small mb-3">Tự tìm Group công khai theo chủ đề và lấy bài viết (không cần đăng nhập FB).</p>
+
+                        <div class="form-check form-switch mb-2">
+                            <input id="groupNewestFirst" class="form-check-input" type="checkbox" checked>
+                            <label for="groupNewestFirst" class="form-check-label fw-semibold">Ưu tiên bài mới nhất trong Group</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input id="groupIncludeComments" class="form-check-input" type="checkbox" checked>
+                            <label for="groupIncludeComments" class="form-check-label fw-semibold">Lấy kèm bình luận &amp; trả lời</label>
+                        </div>
+
+                        <label for="groupRegion" class="form-label fw-semibold">Khu vực cào</label>
+                        <select id="groupRegion" class="form-select mb-3">
+                            <option value="Nghệ An" selected>Nghệ An</option>
+                            <option value="Hà Tĩnh">Hà Tĩnh</option>
+                        </select>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="groupsPerSearch" class="form-label fw-semibold small mb-1">Số Group</label>
+                                <input id="groupsPerSearch" type="number" class="form-control" value="5" min="1" max="50" step="1">
+                            </div>
+                            <div class="col-6">
+                                <label for="minMembers" class="form-label fw-semibold small mb-1">Thành viên tối thiểu</label>
+                                <input id="minMembers" type="number" class="form-control" value="100" min="0" step="100">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="groupPostAge" class="form-label fw-semibold small mb-1">Thời gian bài viết</label>
+                                <select id="groupPostAge" class="form-select">
+                                    <option value="1 day">24 giờ qua</option>
+                                    <option value="7 days" selected>7 ngày qua</option>
+                                    <option value="2 weeks">2 tuần qua</option>
+                                    <option value="30 days">30 ngày qua</option>
+                                    <option value="">Tất cả</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="postsPerGroup" class="form-label fw-semibold small mb-1">Số bài</label>
+                                <input id="postsPerGroup" type="number" class="form-control" value="10" min="1" max="100" step="1">
+                            </div>
+                        </div>
+
+                        <label class="form-label fw-semibold">Chọn từ khóa</label>
+                        <div class="d-grid gap-2">
+                            @foreach (var keyword in new[] { "mua bán nhà", "mua bán đất", "mua bất động sản", "thuê nhà", "thuê đất", "thuê bất động sản" })
+                            {
+                                <button type="button" class="btn btn-primary group-quick-crawl" data-keyword="@keyword">
+                                    <span>@keyword</span><i class="bi bi-play-fill float-end"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Cào bài viết theo từ khóa (alien_force/facebook-scraper-pro-rental) -->
+                    <div class="tab-pane fade" id="pane-keyword" role="tabpanel" aria-labelledby="tab-keyword-btn">
+                        <h5 id="crawlHeading" class="fw-bold mb-3">
+                            <i class="bi bi-search me-2 text-primary"></i>Cào dữ liệu Facebook theo từ khóa
+                        </h5>
+
+                        <div class="form-check form-switch mb-3">
+                            <input id="strictSearch" class="form-check-input" type="checkbox" checked>
+                            <label for="strictSearch" class="form-check-label fw-semibold">Tìm kiếm chính xác</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input id="filterRecent" class="form-check-input" type="checkbox" checked>
+                            <label for="filterRecent" class="form-check-label fw-semibold">Lọc bài viết mới nhất</label>
+                        </div>
+
+                        <label for="crawlRegion" class="form-label fw-semibold">Khu vực cào</label>
+                        <select id="crawlRegion" class="form-select mb-3">
+                            <option value="Nghệ An" selected>Nghệ An</option>
+                            <option value="Hà Tĩnh">Hà Tĩnh</option>
+                        </select>
+
+                        <label for="crawlInterval" class="form-label fw-semibold">Thời gian gần nhất</label>
+                        <select id="crawlInterval" class="form-select mb-3">
+                            <option value="24h" selected>24 giờ qua</option>
+                            <option value="7d">7 ngày qua</option>
+                            <option value="30d">30 ngày qua</option>
+                            <option value="">Tất cả thời gian</option>
+                        </select>
+
+                        <label for="crawlLimit" class="form-label fw-semibold">Số bài mục tiêu (1 - 100)</label>
+                        <input id="crawlLimit" type="number" class="form-control mb-3" value="10" min="1" max="100" step="1">
+
+                        <label class="form-label fw-semibold">Chọn từ khóa</label>
+                        <div class="d-grid gap-2">
+                            @foreach (var keyword in new[] { "mua bán nhà", "mua bán đất", "mua bất động sản", "thuê nhà", "thuê đất", "thuê bất động sản" })
+                            {
+                                <button type="button" class="btn btn-primary keyword-crawl" data-keyword="@keyword">
+                                    <span>@keyword</span><i class="bi bi-play-fill float-end"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <button id="crawlStop" type="button" class="btn btn-outline-danger w-100 mt-3" disabled>
+                    <i class="bi bi-stop-fill me-1"></i>Dừng cào dữ liệu
+                </button>
+                <p id="crawlConnectionStatus" class="small text-muted mt-3 mb-0">Sẵn sàng thu thập dữ liệu.</p>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-lg-8">
+        <section class="card border-0 shadow-sm h-100" aria-labelledby="crawlResultsHeading">
+            <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
+                <h5 id="crawlResultsHeading" class="fw-bold mb-0">Kết quả thu thập <span id="crawlResultCount" class="badge bg-secondary ms-1">0 bài</span></h5>
+                <div class="d-flex gap-2">
+                    <button id="crawlSave" type="button" class="btn btn-sm btn-primary" disabled><i class="bi bi-database-add me-1"></i>Lưu database</button>
+                    <button id="crawlExport" type="button" class="btn btn-sm btn-outline-success" disabled><i class="bi bi-filetype-csv me-1"></i>Xuất CSV</button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:700px">
+                <table class="table table-hover align-middle mb-0">
+                    <caption class="visually-hidden">Danh sách bài Facebook thu thập theo từ khóa và Group</caption>
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Thời gian</th><th>Nội dung</th><th>Tác giả / Group</th><th>Tương tác</th><th>Bài viết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="crawlResultsBody">
+                        <tr><td colspan="5" class="text-center text-muted py-5">Chưa có dữ liệu nào được trích xuất.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/socialbot-crawl.js" asp-append-version="true"></script>
+}

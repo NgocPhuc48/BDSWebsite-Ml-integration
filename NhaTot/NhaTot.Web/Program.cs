@@ -22,9 +22,13 @@ builder.Services.AddScoped<CrawlSuggestionService>();
 builder.Services.AddHostedService<CrawlScheduleWorker>();
 builder.Services.AddMemoryCache();
 
-// Đăng ký DbContext kết nối SQL Server
+// Đăng ký DbContext kết nối MySQL
 builder.Services.AddDbContext<NhaTotDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Server=localhost;Port=3306;Database=nhatot;User=root;Password=;";
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 46)));
+});
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

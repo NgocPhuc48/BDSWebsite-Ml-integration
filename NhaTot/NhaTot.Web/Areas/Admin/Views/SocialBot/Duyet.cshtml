@@ -19,14 +19,28 @@
             <label asp-for="Title">Tiêu đề</label><textarea asp-for="Title" class="form-control" rows="3" maxlength="500"></textarea>
             <label asp-for="PropertyTypeId">Loại bất động sản</label>
             <select asp-for="PropertyTypeId" asp-items="Model.PropertyTypes" class="form-select"><option value="">Chọn loại BĐS</option></select>
-            <label asp-for="WardId">Phường/xã · Quận/huyện · Tỉnh</label>
-            <select asp-for="WardId" asp-items="Model.Wards" class="form-select"><option value="">Chọn địa phương</option></select>
+            <label asp-for="Province">Địa phương</label>
+            <select asp-for="Province" class="form-select">
+                <option value="">Chọn địa phương</option>
+                <option value="Nghệ An">Nghệ An</option>
+                <option value="Hà Tĩnh">Hà Tĩnh</option>
+            </select>
             <label asp-for="ContentType">Nội dung bài</label>
             <select asp-for="ContentType" class="form-select"><option value="OFFER">Chào bán / Cho thuê</option><option value="DEMAND">Nhu cầu cần mua / cần thuê</option></select>
             <label asp-for="TransactionType">Loại giao dịch</label>
             <select asp-for="TransactionType" class="form-select"><option value="BAN">Mua bán</option><option value="CHO_THUE">Cho thuê</option></select>
-            <label asp-for="Price">Giá rao tổng (VNĐ; với cho thuê là VNĐ/tháng)</label>
-            <input asp-for="Price" type="number" min="0.01" max="9999999999999999.99" step="0.01" class="form-control" />
+            <label asp-for="ExactPrice">Giá cụ thể - GiaRaoVND (VNĐ; để trống nếu dùng khoảng giá)</label>
+            <input asp-for="ExactPrice" type="number" min="0.01" max="9999999999999999.99" step="0.01" class="form-control" id="exactPriceInput" />
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label asp-for="PriceMin">Khoảng giá từ - GiaMinVND (VNĐ)</label>
+                    <input asp-for="PriceMin" type="number" min="0.01" max="9999999999999999.99" step="0.01" class="form-control" id="priceMinInput" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="PriceMax">Khoảng giá đến - GiaMaxVND (VNĐ)</label>
+                    <input asp-for="PriceMax" type="number" min="0.01" max="9999999999999999.99" step="0.01" class="form-control" id="priceMaxInput" />
+                </div>
+            </div>
             <label asp-for="Area">Diện tích (m²)</label><input asp-for="Area" type="number" min="0.01" max="9999999999.99" step="0.01" class="form-control" />
             <p class="small text-muted">Chỉ bài chào bán/cho thuê đã duyệt được gợi ý cho mục tiêu tương đồng. Bài nhu cầu không được coi là tài sản đang rao. Lưu nháp hoặc từ chối sẽ gỡ bài khỏi gợi ý.</p>
             <div class="d-flex flex-wrap gap-2">
@@ -37,3 +51,20 @@
         </form>
     </div>
 </div>
+@section Scripts {
+    <script>
+        (() => {
+            const exact = document.getElementById('exactPriceInput');
+            const pMin = document.getElementById('priceMinInput');
+            const pMax = document.getElementById('priceMaxInput');
+            exact?.addEventListener('input', () => {
+                if (exact.value) { pMin.value = ''; pMax.value = ''; }
+            });
+            for (const r of [pMin, pMax]) {
+                r?.addEventListener('input', () => {
+                    if (r.value) exact.value = '';
+                });
+            }
+        })();
+    </script>
+}

@@ -228,7 +228,10 @@ namespace NhaTot.Web.Areas.Admin.Controllers
 
             if (nguongGia.HasValue)
             {
-                leadQuery = leadQuery.Where(l => l.MaDuLieuNavigation == null || !l.MaDuLieuNavigation.GiaRaoVnd.HasValue || l.MaDuLieuNavigation.GiaRaoVnd <= 0 || l.MaDuLieuNavigation.GiaRaoVnd <= nguongGia.Value);
+                leadQuery = leadQuery.Where(l => l.MaDuLieuNavigation == null
+                    || (!l.MaDuLieuNavigation.GiaRaoVnd.HasValue && !l.MaDuLieuNavigation.GiaMinVnd.HasValue)
+                    || (l.MaDuLieuNavigation.GiaRaoVnd.HasValue && l.MaDuLieuNavigation.GiaRaoVnd <= nguongGia.Value)
+                    || (!l.MaDuLieuNavigation.GiaRaoVnd.HasValue && l.MaDuLieuNavigation.GiaMinVnd <= nguongGia.Value));
             }
 
             int countLead = await leadQuery.CountAsync();

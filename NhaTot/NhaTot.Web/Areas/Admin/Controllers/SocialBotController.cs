@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NhaTot.Domain.Entities;
 
 namespace NhaTot.Web.Areas.Admin.Controllers;
@@ -11,9 +12,10 @@ public partial class SocialBotController : Controller
 {
     private readonly NhaTotDbContext _context;
 
-    public SocialBotController(NhaTotDbContext context)
+    public SocialBotController(NhaTotDbContext context, IConfiguration configuration)
     {
         _context = context;
+        ViewBag.ToolCaoDataUrl = configuration["ToolCaoData:BaseUrl"] ?? "http://localhost:5080";
     }
 
     // GET: Admin/SocialBot (Trang quáº£n lÃ½ danh má»¥c Nguá»“n cÃ o)
@@ -42,7 +44,7 @@ public partial class SocialBotController : Controller
         return Json(new { success = true, data = item });
     }
 
-    // POST: Admin/SocialBot/ToggleSource/5 (Báº­t / Táº¯t Bot cÃ o tá»± Ä‘á»™ng)
+    // POST: Admin/SocialBot/ToggleSource/5 (Báº‘t / Táº¯t Bot cÃ o tá»± Ä‘á»™ng)
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleSource(int id)
     {

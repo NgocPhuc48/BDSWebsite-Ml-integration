@@ -5,24 +5,36 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
 using NhaTot.Web.Areas.Admin.Models;
+using NhaTot.Web.Services;
 
 namespace NhaTot.Web.Areas.Admin.Controllers;
 
 public partial class SocialBotController
 {
+    private static string? NormalizeProvinceChoice(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var v = value.Trim();
+        if (v.Contains("Nghệ An", StringComparison.OrdinalIgnoreCase) || v.Contains("Nghe An", StringComparison.OrdinalIgnoreCase))
+            return "Nghệ An";
+        if (v.Contains("Hà Tĩnh", StringComparison.OrdinalIgnoreCase) || v.Contains("Ha Tinh", StringComparison.OrdinalIgnoreCase))
+            return "Hà Tĩnh";
+        return null;
+    }
+
     private async Task ReviewChoices(CrawlReviewModel model, DuLieuThuThap entity)
     {
-        model.RawContent = entity.NoiDungGoc;
+        model.RawContent = RealEstateTextExtractor.CleanIcons(entity.NoiDungGoc);
         model.OriginalUrl = entity.Urltin;
-        model.ExtractedLocation = $"{entity.PhuongXaNguon}, {entity.TinhNguon}";
+        model.ExtractedLocation = string.Join(", ", new[] { entity.PhuongXaNguon, entity.TinhNguon }.Where(s => !string.IsNullOrWhiteSpace(s)));
         model.ExtractedType = entity.LoaiBdsnguon;
         model.Status = entity.TrangThaiXuLy;
-        model.PropertyTypes = await _context.LoaiBds.Where(x => x.TrangThai == true)
-            .OrderBy(x => x.TenLoaiBds).Select(x => new SelectListItem(x.TenLoaiBds, x.MaLoaiBds.ToString())).ToListAsync();
-        model.Wards = await _context.PhuongXas.Where(x => x.TrangThai == true)
-            .OrderBy(x => x.TenPhuongXa).Select(x => new SelectListItem(
-                x.TenPhuongXa + " / " + x.MaQuanHuyenNavigation!.TenQuanHuyen + " / " + x.MaQuanHuyenNavigation.MaTinhNavigation!.TenTinh,
-                x.MaPhuongXa.ToString())).ToListAsync();
+        var types = await _context.LoaiBds.Where(x => x.TrangThai == true).ToListAsync();
+        model.PropertyTypes = types
+            .OrderBy(x => (x.TenLoaiBds ?? "").StartsWith("Cho thuê", StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+            .ThenBy(x => x.TenLoaiBds)
+            .Select(x => new SelectListItem(x.TenLoaiBds, x.MaLoaiBds.ToString()))
+            .ToList();
     }
 
     [HttpGet]
@@ -30,10 +42,30 @@ public partial class SocialBotController
     {
         var item = await _context.DuLieuThuThaps.FindAsync(id);
         if (item == null) return NotFound();
-        var model = new CrawlReviewModel {
-            Id = id, Title = item.TieuDe ?? "", Price = item.GiaRaoVnd, Area = item.DienTich,
-            PropertyTypeId = item.MaLoaiBdsDaDuyet, WardId = item.MaPhuongXaDaDuyet,
-            TransactionType = item.LoaiGiaoDichDaDuyet ?? "BAN", ContentType = item.LoaiNoiDungDaDuyet ?? "OFFER"
+        var detectedProvince = NormalizeProvinceChoice(item.TinhNguon) ?? NormalizeProvinceChoice(item.NoiDungGoc);
+        int? propertyTypeId = item.MaLoaiBdsDaDuyet;
+        if (!propertyTypeId.HasValue && !string.IsNullOrWhiteSpace(item.LoaiBdsnguon))
+        {
+            var mappedName = item.LoaiBdsnguon == "Đất" ? "Đất nền" : item.LoaiBdsnguon;
+            propertyTypeId = await _context.LoaiBds
+                .Where(x => x.TrangThai == true && x.TenLoaiBds == mappedName)
+                .Select(x => (int?)x.MaLoaiBds)
+                .FirstOrDefaultAsync();
+        }
+        var cleanTitle = RealEstateTextExtractor.CleanIcons(item.TieuDe);
+        var model = new CrawlReviewModel
+        {
+            Id = id,
+            Title = string.IsNullOrWhiteSpace(cleanTitle) ? (item.TieuDe ?? "") : cleanTitle,
+            ExactPrice = item.GiaRaoVnd,
+            PriceMin = item.GiaRaoVnd.HasValue ? null : item.GiaMinVnd,
+            PriceMax = item.GiaRaoVnd.HasValue ? null : item.GiaMaxVnd,
+            Area = item.DienTich,
+            PropertyTypeId = propertyTypeId,
+            Province = detectedProvince,
+            WardId = item.MaPhuongXaDaDuyet,
+            TransactionType = item.LoaiGiaoDichDaDuyet ?? "BAN",
+            ContentType = item.LoaiNoiDungDaDuyet ?? "OFFER"
         };
         await ReviewChoices(model, item);
         return View(model);
@@ -47,35 +79,101 @@ public partial class SocialBotController
         if (operation is not ("APPROVED" or "REJECTED" or "NEEDS_REVIEW")) return BadRequest();
         if (model.TransactionType is not ("BAN" or "CHO_THUE") || model.ContentType is not ("OFFER" or "DEMAND"))
             ModelState.AddModelError("", "Loại giao dịch hoặc nội dung không hợp lệ.");
+
         var type = await _context.LoaiBds.FirstOrDefaultAsync(x => x.MaLoaiBds == model.PropertyTypeId && x.TrangThai == true);
-        var ward = await _context.PhuongXas.Include(x => x.MaQuanHuyenNavigation)!.ThenInclude(x => x!.MaTinhNavigation)
-            .FirstOrDefaultAsync(x => x.MaPhuongXa == model.WardId && x.TrangThai == true);
-        if (model.PropertyTypeId.HasValue && type == null) ModelState.AddModelError(nameof(model.PropertyTypeId), "Loại BĐS không hợp lệ.");
-        if (model.WardId.HasValue && ward == null) ModelState.AddModelError(nameof(model.WardId), "Phường/xã không hợp lệ.");
+        var normalizedProvince = NormalizeProvinceChoice(model.Province);
+
+        decimal? finalExact = null;
+        decimal? finalMin = null;
+        decimal? finalMax = null;
+
+        if (model.ExactPrice.HasValue)
+        {
+            finalExact = model.ExactPrice.Value;
+        }
+        else if (model.PriceMin.HasValue || model.PriceMax.HasValue)
+        {
+            if (!model.PriceMin.HasValue || !model.PriceMax.HasValue)
+                ModelState.AddModelError("", "Nếu nhập Khoảng giá thì cần nhập đủ cả GiaMinVND và GiaMaxVND.");
+            else if (model.PriceMin.Value > model.PriceMax.Value)
+                ModelState.AddModelError("", "Giá tối thiểu (GiaMinVND) không được lớn hơn Giá tối đa (GiaMaxVND).");
+            else if (model.PriceMin.Value == model.PriceMax.Value)
+                finalExact = model.PriceMin.Value;
+            else
+            {
+                finalMin = model.PriceMin.Value;
+                finalMax = model.PriceMax.Value;
+            }
+        }
+
+        if (model.PropertyTypeId.HasValue && type == null)
+            ModelState.AddModelError(nameof(model.PropertyTypeId), "Loại BĐS không hợp lệ.");
+        if (!string.IsNullOrWhiteSpace(model.Province) && normalizedProvince == null)
+            ModelState.AddModelError(nameof(model.Province), "Địa phương chỉ hỗ trợ Nghệ An hoặc Hà Tĩnh.");
+
         if (operation == "APPROVED")
         {
-            if (type == null || ward?.MaQuanHuyenNavigation?.MaTinhNavigation == null || model.Price is null || model.Area is null)
-                ModelState.AddModelError("", "Cần đủ loại BĐS, địa phương, giá và diện tích để duyệt.");
-            if (!Uri.TryCreate(item.Urltin, UriKind.Absolute, out var url) || url.Scheme != "https"
-                || !(url.Host == "facebook.com" || url.Host.EndsWith(".facebook.com", StringComparison.Ordinal)))
-                ModelState.AddModelError("", "Bài gốc phải có URL HTTPS Facebook hợp lệ.");
+            var hasAnyPrice = finalExact.HasValue || (finalMin.HasValue && finalMax.HasValue);
+            if (type == null || normalizedProvince == null || !hasAnyPrice || model.Area is null)
+                ModelState.AddModelError("", "Cần đủ loại BĐS, địa phương, Giá (hoặc Khoảng giá) và diện tích để duyệt.");
+            if (!Uri.TryCreate(item.Urltin, UriKind.Absolute, out var url) || (url.Scheme != "https" && url.Scheme != "http")
+                || !(url.Host == "facebook.com" || url.Host.EndsWith(".facebook.com", StringComparison.OrdinalIgnoreCase)
+                     || url.Host == "fb.com" || url.Host.EndsWith(".fb.com", StringComparison.OrdinalIgnoreCase)))
+                ModelState.AddModelError("", "Bài gốc phải có URL Facebook hợp lệ.");
         }
-        if (!ModelState.IsValid) { await ReviewChoices(model, item); return View(model); }
-        var before = JsonSerializer.Serialize(new { item.TieuDe, item.GiaRaoVnd, item.DienTich, item.MaLoaiBdsDaDuyet,
-            item.MaPhuongXaDaDuyet, item.LoaiGiaoDichDaDuyet, item.LoaiNoiDungDaDuyet, item.TrangThaiXuLy });
-        item.TieuDe = model.Title.Trim(); item.GiaRaoVnd = model.Price; item.DienTich = model.Area;
-        item.MaLoaiBdsDaDuyet = model.PropertyTypeId; item.MaPhuongXaDaDuyet = model.WardId;
-        item.LoaiGiaoDichDaDuyet = model.TransactionType; item.LoaiNoiDungDaDuyet = model.ContentType;
+
+        if (!ModelState.IsValid)
+        {
+            await ReviewChoices(model, item);
+            return View(model);
+        }
+
+        int? resolvedWardId = item.MaPhuongXaDaDuyet;
+        if (normalizedProvince != null && !string.IsNullOrWhiteSpace(item.PhuongXaNguon))
+        {
+            var matchedWard = await _context.PhuongXas
+                .Where(x => x.TrangThai == true
+                    && x.TenPhuongXa == item.PhuongXaNguon
+                    && x.MaQuanHuyenNavigation != null
+                    && x.MaQuanHuyenNavigation.MaTinhNavigation != null
+                    && x.MaQuanHuyenNavigation.MaTinhNavigation.TenTinh!.Contains(normalizedProvince))
+                .Select(x => (int?)x.MaPhuongXa)
+                .FirstOrDefaultAsync();
+            if (matchedWard.HasValue) resolvedWardId = matchedWard;
+        }
+
+        var before = JsonSerializer.Serialize(new
+        {
+            item.TieuDe, item.GiaRaoVnd, item.GiaMinVnd, item.GiaMaxVnd, item.DienTich, item.MaLoaiBdsDaDuyet,
+            item.MaPhuongXaDaDuyet, item.TinhNguon, item.LoaiGiaoDichDaDuyet, item.LoaiNoiDungDaDuyet, item.TrangThaiXuLy
+        });
+
+        item.TieuDe = model.Title.Trim();
+        item.GiaRaoVnd = finalExact;
+        item.GiaMinVnd = finalMin;
+        item.GiaMaxVnd = finalMax;
+        item.DienTich = model.Area;
+        item.MaLoaiBdsDaDuyet = model.PropertyTypeId;
+        item.MaPhuongXaDaDuyet = resolvedWardId;
+        item.LoaiGiaoDichDaDuyet = model.TransactionType;
+        item.LoaiNoiDungDaDuyet = model.ContentType;
         item.LoaiBdsnguon = type?.TenLoaiBds;
-        item.PhuongXaNguon = ward?.TenPhuongXa;
-        item.TinhNguon = ward?.MaQuanHuyenNavigation?.MaTinhNavigation?.TenTinh;
+        item.TinhNguon = normalizedProvince;
         item.TrangThaiXuLy = operation;
-        // Chia nhật ký để không cắt mất nội dung trong cột ChiTiet(1000).
+
         var audit = $"Admin {User.FindFirstValue(ClaimTypes.NameIdentifier)}; Before: {before}; After: " +
-            JsonSerializer.Serialize(new { model.Title, model.Price, model.Area, model.PropertyTypeId, model.WardId, model.TransactionType, model.ContentType, operation });
+            JsonSerializer.Serialize(new { model.Title, ExactPrice = finalExact, PriceMin = finalMin, PriceMax = finalMax, model.Area, model.PropertyTypeId, Province = normalizedProvince, model.TransactionType, model.ContentType, operation });
         for (var i = 0; i < audit.Length; i += 900)
-            item.LichSuXuLyDuLieus.Add(new LichSuXuLyDuLieu { BuocXuLy = "REVIEW_POST", KetQua = operation,
-                ThoiDiem = DateTime.UtcNow, ChiTiet = audit.Substring(i, Math.Min(900, audit.Length - i)) });
+        {
+            item.LichSuXuLyDuLieus.Add(new LichSuXuLyDuLieu
+            {
+                BuocXuLy = "REVIEW_POST",
+                KetQua = operation,
+                ThoiDiem = DateTime.UtcNow,
+                ChiTiet = audit.Substring(i, Math.Min(900, audit.Length - i))
+            });
+        }
+
         await _context.SaveChangesAsync();
         TempData["ExtractionMessage"] = $"Đã cập nhật bài #{item.MaDuLieu}. Chỉ bài chào bán/cho thuê đã duyệt mới xuất hiện trong gợi ý Bẫy giá.";
         return RedirectToAction(nameof(DuLieu));
