@@ -1,4 +1,4 @@
-﻿IF DB_ID(N'NhaTot') IS NULL
+IF DB_ID(N'NhaTot') IS NULL
     CREATE DATABASE NhaTot;
 GO
 USE NhaTot;
@@ -245,6 +245,7 @@ GO
 CREATE TABLE dbo.MucTieuTheoDoiGia (
     MaMucTieu BIGINT IDENTITY(1,1) PRIMARY KEY,
     MaNguoiDung BIGINT,
+    MaTinh INT,
     MaQuanHuyen INT,
     MaPhuongXa INT,
     MaLoaiBDS INT,
@@ -255,6 +256,7 @@ CREATE TABLE dbo.MucTieuTheoDoiGia (
     NgayTao DATETIME2,
     NgayHetHan DATETIME2,
     CONSTRAINT FK_MucTieuTheoDoiGia_NguoiDung FOREIGN KEY (MaNguoiDung) REFERENCES dbo.NguoiDung(MaNguoiDung),
+    CONSTRAINT FK_MucTieuTheoDoiGia_TinhThanh FOREIGN KEY (MaTinh) REFERENCES dbo.TinhThanh(MaTinh),
     CONSTRAINT FK_MucTieuTheoDoiGia_QuanHuyen FOREIGN KEY (MaQuanHuyen) REFERENCES dbo.QuanHuyen(MaQuanHuyen),
     CONSTRAINT FK_MucTieuTheoDoiGia_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa),
     CONSTRAINT FK_MucTieuTheoDoiGia_LoaiBDS FOREIGN KEY (MaLoaiBDS) REFERENCES dbo.LoaiBDS(MaLoaiBDS)
@@ -334,20 +336,30 @@ GO
 
 CREATE TABLE dbo.DuLieuThuThap (
     MaDuLieu BIGINT IDENTITY(1,1) PRIMARY KEY,
-    MaNguon INT,
+    MaNguon INT NULL,
     MaTinNguon NVARCHAR(200),
     URLTin NVARCHAR(1500),
     TieuDe NVARCHAR(500),
+    NoiDungGoc NVARCHAR(MAX) NULL,
+    DuLieuGocJson NVARCHAR(MAX) NULL,
+    MaLoaiBdsDaDuyet INT NULL,
+    MaPhuongXaDaDuyet INT NULL,
+    LoaiGiaoDichDaDuyet VARCHAR(30) NULL,
+    LoaiNoiDungDaDuyet VARCHAR(30) NULL,
     LoaiBDSNguon NVARCHAR(150),
     TinhNguon NVARCHAR(150),
     PhuongXaNguon NVARCHAR(150),
-    GiaRaoVND DECIMAL(18,2),
+    GiaRaoVND DECIMAL(18,2) NULL, -- Lưu khi bài đăng có giá cụ thể (lúc này GiaMinVND & GiaMaxVND = NULL)
+    GiaMinVND DECIMAL(18,2) NULL, -- Lưu khoảng giá tối thiểu ước tính (ví dụ 1 tỷ 7xx -> 1,701,000,000)
+    GiaMaxVND DECIMAL(18,2) NULL, -- Lưu khoảng giá tối đa ước tính (ví dụ 1 tỷ 7xx -> 1,799,000,000)
     DienTich DECIMAL(12,2),
     HashNoiDung CHAR(64),
     NgayDangNguon DATETIME2,
     NgayThuThap DATETIME2,
     TrangThaiXuLy VARCHAR(20),
-    CONSTRAINT FK_DuLieuThuThap_NguonDuLieu FOREIGN KEY (MaNguon) REFERENCES dbo.NguonDuLieu(MaNguon)
+    CONSTRAINT FK_DuLieuThuThap_NguonDuLieu FOREIGN KEY (MaNguon) REFERENCES dbo.NguonDuLieu(MaNguon),
+    CONSTRAINT FK_DuLieuThuThap_LoaiBDS FOREIGN KEY (MaLoaiBdsDaDuyet) REFERENCES dbo.LoaiBDS(MaLoaiBDS),
+    CONSTRAINT FK_DuLieuThuThap_PhuongXa FOREIGN KEY (MaPhuongXaDaDuyet) REFERENCES dbo.PhuongXa(MaPhuongXa)
 );
 GO
 
@@ -375,6 +387,28 @@ CREATE TABLE dbo.LeadKhachHangNhuCau (
     NgayQuet DATETIME2,
     CONSTRAINT FK_LeadKhachHangNhuCau_DuLieuThuThap FOREIGN KEY (MaDuLieu) REFERENCES dbo.DuLieuThuThap(MaDuLieu),
     CONSTRAINT FK_LeadKhachHangNhuCau_PhuongXa FOREIGN KEY (MaPhuongXa) REFERENCES dbo.PhuongXa(MaPhuongXa)
+);
+GO
+
+CREATE TABLE dbo.LichCaoDuLieu (
+    Id INT NOT NULL PRIMARY KEY,
+    Enabled BIT NOT NULL DEFAULT 0,
+    IntervalMinutes INT NOT NULL DEFAULT 60,
+    PostsPerSource INT NOT NULL DEFAULT 10,
+    LookbackDays INT NOT NULL DEFAULT 1,
+    NextRunUtc DATETIME2 NULL,
+    LastStartedUtc DATETIME2 NULL,
+    ActiveRunId VARCHAR(100) NULL,
+    SourcesJson NVARCHAR(MAX) NULL,
+    Status VARCHAR(30) NOT NULL DEFAULT 'IDLE',
+    LastMessage NVARCHAR(1000) NULL,
+    EncryptedApifyToken NVARCHAR(MAX) NULL
+);
+GO
+
+CREATE TABLE dbo.SocialBotSchemaVersions (
+    Version VARCHAR(20) NOT NULL PRIMARY KEY,
+    AppliedUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 GO
 
@@ -452,6 +486,8 @@ IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 2)
     INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (2, 1, N'Thị xã Cửa Lò', 'CUALO', 1);
 IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 3)
     INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (3, 1, N'Huyện Nghi Lộc', 'NGHILOC', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.QuanHuyen WHERE MaQuanHuyen = 4)
+    INSERT INTO dbo.QuanHuyen (MaQuanHuyen, MaTinh, TenQuanHuyen, MaHanhChinh, TrangThai) VALUES (4, 2, N'Thành phố Hà Tĩnh', 'HATINH', 1);
 SET IDENTITY_INSERT dbo.QuanHuyen OFF;
 GO
 
@@ -468,17 +504,24 @@ IF NOT EXISTS (SELECT 1 FROM dbo.PhuongXa WHERE MaPhuongXa = 4)
 SET IDENTITY_INSERT dbo.PhuongXa OFF;
 GO
 
--- 4. Thêm Loại Bất Động Sản mẫu
+-- 4. Thêm Loại Bất Động Sản mẫu (5 loại chuẩn mới)
 SET IDENTITY_INSERT dbo.LoaiBDS ON;
 IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 1)
-    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (1, N'Bán Đất nền', N'Đất thổ cư, đất dự án', 1);
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (1, N'Đất nền', N'Đất nền, đất thổ cư, đất dự án', 1);
 IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 2)
-    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (2, N'Bán Nhà riêng / Biệt thự', N'Nhà phố, biệt thự liền kề', 1);
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (2, N'Nhà', N'Nhà ở riêng lẻ, nhà phố', 1);
 IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 3)
-    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (3, N'Bán Căn hộ chung cư', N'Chung cư cao tầng, thương mại', 1);
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (3, N'Căn hộ', N'Căn hộ', 1);
 IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 4)
-    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (4, N'Cho thuê Nhà trọ / Căn hộ', N'Phòng trọ, nhà trọ sinh viên', 1);
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (4, N'Chung cư', N'Chung cư', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.LoaiBDS WHERE MaLoaiBDS = 5)
+    INSERT INTO dbo.LoaiBDS (MaLoaiBDS, TenLoaiBDS, MoTa, TrangThai) VALUES (5, N'Biệt thự', N'Biệt thự, liền kề', 1);
 SET IDENTITY_INSERT dbo.LoaiBDS OFF;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.LichCaoDuLieu WHERE Id = 1)
+    INSERT INTO dbo.LichCaoDuLieu (Id, Enabled, IntervalMinutes, PostsPerSource, LookbackDays, Status)
+    VALUES (1, 0, 60, 10, 1, 'IDLE');
 GO
 
 -- 5. Thêm Tài khoản Admin & Môi Giới Mẫu (Mật khẩu đăng nhập mặc định: 123456)

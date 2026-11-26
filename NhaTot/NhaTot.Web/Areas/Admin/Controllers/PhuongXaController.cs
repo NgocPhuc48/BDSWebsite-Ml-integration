@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
+using NhaTot.Web.Models;
 
 namespace NhaTot.Web.Areas.Admin.Controllers;
 
@@ -17,7 +18,7 @@ public class PhuongXaController : Controller
     }
 
     // GET: Admin/PhuongXa
-    public async Task<IActionResult> Index(int? maQuanHuyen)
+    public async Task<IActionResult> Index(int? maQuanHuyen, int page = 1)
     {
         var query = _context.PhuongXas
             .Include(p => p.MaQuanHuyenNavigation)
@@ -30,7 +31,16 @@ public class PhuongXaController : Controller
             query = query.Where(p => p.MaQuanHuyen == maQuanHuyen);
         }
 
-        var list = await query.ToListAsync();
+        const int pageSize = 25;
+        var totalItems = await query.CountAsync();
+        page = PaginationViewModel.NormalizePage(page, pageSize, totalItems);
+        ViewBag.Pagination = new PaginationViewModel(page, pageSize, totalItems);
+
+        var list = await query
+            .OrderBy(p => p.MaPhuongXa)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
         // Láº¥y danh sÃ¡ch Quáº­n/Huyá»‡n cho Dropdown lá»c vÃ  Modal ThÃªm/Sá»­a
         ViewBag.QuanHuyens = await _context.QuanHuyens

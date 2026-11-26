@@ -226,12 +226,29 @@ namespace NhaTot.Web.Areas.Admin.Controllers
             else if (maQuanHuyen.HasValue && maQuanHuyen > 0)
                 leadQuery = leadQuery.Where(l => l.MaPhuongXaNavigation != null && l.MaPhuongXaNavigation.MaQuanHuyen == maQuanHuyen);
 
+            int countLead;
             if (nguongGia.HasValue)
             {
-                leadQuery = leadQuery.Where(l => l.MaDuLieuNavigation == null || !l.MaDuLieuNavigation.GiaRaoVnd.HasValue || l.MaDuLieuNavigation.GiaRaoVnd <= 0 || l.MaDuLieuNavigation.GiaRaoVnd <= nguongGia.Value);
-            }
+                var leadPrices = await leadQuery
+                    .Select(l => new
+                    {
+                        GiaRao = l.MaDuLieuNavigation != null ? l.MaDuLieuNavigation.GiaRaoVnd : null,
+                        GiaMin = l.MaDuLieuNavigation != null ? l.MaDuLieuNavigation.GiaMinVnd : null
+                    })
+                    .ToListAsync();
 
-            int countLead = await leadQuery.CountAsync();
+                countLead = leadPrices.Count(x =>
+                {
+                    var parsed = NhaTot.Web.Services.RealEstateTextExtractor.TryParseGiaRaoVnd(x.GiaRao);
+                    return (!parsed.HasValue && !x.GiaMin.HasValue)
+                        || (parsed.HasValue && parsed.Value <= nguongGia.Value)
+                        || (!parsed.HasValue && x.GiaMin <= nguongGia.Value);
+                });
+            }
+            else
+            {
+                countLead = await leadQuery.CountAsync();
+            }
 
             return countTinDang + countLead;
         }

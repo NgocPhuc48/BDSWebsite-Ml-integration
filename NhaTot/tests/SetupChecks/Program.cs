@@ -44,7 +44,14 @@ if (args.Contains("--database") || args.Contains("--train"))
     var config = new ConfigurationBuilder().SetBasePath(webRoot).AddJsonFile("appsettings.json")
         .AddJsonFile("appsettings.Development.json", optional: true).AddEnvironmentVariables().Build();
     var services = new ServiceCollection();
-    services.AddDbContext<NhaTotDbContext>(options => options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+    var connectionString = config.GetConnectionString("DefaultConnection")!;
+    services.AddDbContext<NhaTotDbContext>(options =>
+    {
+        if (connectionString.Contains("Port=3306", StringComparison.OrdinalIgnoreCase))
+            options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 46)));
+        else
+            options.UseSqlServer(connectionString);
+    });
     services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(new TrainingEnvironment(webRoot));
     services.AddScoped<ValuationTrainingService>();
     services.AddScoped<IAiDinhGiaService, AiDinhGiaService>();

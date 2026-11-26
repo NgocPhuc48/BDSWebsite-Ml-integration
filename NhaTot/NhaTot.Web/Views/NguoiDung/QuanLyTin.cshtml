@@ -82,5 +82,7 @@
                 </table>
             </div>
         </div>
+
+        @await Html.PartialAsync("_Pagination", ViewBag.Pagination as NhaTot.Web.Models.PaginationViewModel)
     }
 </div>

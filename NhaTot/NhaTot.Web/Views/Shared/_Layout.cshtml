@@ -41,36 +41,87 @@
         }
         /* Modern Header Navbar */
         .navbar-nhatot {
-            background: #ffffff;
-            border-bottom: 1px solid #e9ecef;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+        }
+        .navbar-brand {
+            white-space: nowrap;
+        }
+        .brand-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb 0%, #0d6efd 100%);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
         }
         .navbar-brand-logo {
             font-weight: 800;
-            font-size: 1.5rem;
-            color: #0d6efd;
+            font-size: 1.35rem;
+            color: #0f172a;
             letter-spacing: -0.5px;
         }
         .nav-link-custom {
             font-weight: 500;
-            color: #495057;
-            padding: 8px 16px !important;
-            border-radius: 8px;
-            transition: all 0.2s;
+            font-size: 0.92rem;
+            color: #475569;
+            padding: 7px 12px !important;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .nav-link-custom:hover {
             color: #0d6efd;
             background-color: #f1f5f9;
         }
+        .nav-link-custom.active {
+            color: #0d6efd;
+            background-color: #eff6ff;
+            font-weight: 600;
+        }
+        .wallet-pill {
+            white-space: nowrap;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 6px 12px;
+            border-radius: 999px;
+            transition: all 0.2s ease;
+        }
+        .wallet-pill:hover {
+            background: #fef3c7;
+            color: #78350f;
+        }
+        .btn-account-pill {
+            white-space: nowrap;
+            height: 38px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .btn-account-pill:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
         .btn-post-property {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5253 100%);
             color: white;
             font-weight: 600;
+            font-size: 0.9rem;
             border: none;
-            padding: 9px 20px;
+            padding: 8px 16px;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(238, 82, 83, 0.25);
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .btn-post-property:hover {
             transform: translateY(-1px);
@@ -97,11 +148,17 @@
 <body class="d-flex flex-column min-vh-100">
 
     <!-- HEADER / NAVIGATION -->
+    @{
+        var reqPath = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
+        var reqTx = (Context.Request.Query["LoaiGiaoDich"].ToString() ?? "").ToUpperInvariant();
+        bool isHome = reqPath == "/" || reqPath == "/home" || reqPath == "/home/index";
+    }
     <header class="sticky-top" style="z-index: 1020;">
         <nav class="navbar navbar-expand-lg navbar-nhatot py-2">
-            <div class="container">
+            <div class="container-xl">
                 <!-- Logo -->
-                <a class="navbar-brand d-flex align-items-center" href="/">
+                <a class="navbar-brand d-flex align-items-center gap-2 me-2" href="/">
+                    <span class="brand-icon"><i class="bi bi-houses-fill"></i></span>
                     <span class="navbar-brand-logo">NhaTot<span class="text-danger">.vn</span></span>
                 </a>
 
@@ -111,41 +168,43 @@
 
                 <div class="collapse navbar-collapse" id="navbarMain">
                     <!-- Left Nav Menu -->
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-2 gap-lg-1 align-items-lg-center">
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="/"><i class="bi bi-house me-1"></i>Trang chủ</a>
+                            <a class="nav-link nav-link-custom @(isHome && string.IsNullOrEmpty(reqTx) ? "active" : "")" href="/"><i class="bi bi-house me-1"></i>Trang chủ</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="/?LoaiGiaoDich=BAN">Bất động sản bán</a>
+                            <a class="nav-link nav-link-custom @(isHome && reqTx == "BAN" ? "active" : "")" href="/?LoaiGiaoDich=BAN">Mua bán</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="/?LoaiGiaoDich=CHO_THUE">Cho thuê</a>
+                            <a class="nav-link nav-link-custom @(isHome && reqTx == "CHO_THUE" ? "active" : "")" href="/?LoaiGiaoDich=CHO_THUE">Cho thuê</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom text-primary fw-semibold" href="/DinhGia"><i class="bi bi-cpu me-1"></i>Định giá AI</a>
+                            <a class="nav-link nav-link-custom text-primary fw-semibold @(reqPath.StartsWith("/dinhgia") ? "active" : "")" href="/DinhGia"><i class="bi bi-cpu me-1"></i>Định giá AI</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link nav-link-custom text-danger fw-semibold" href="/BayGia"><i class="bi bi-crosshair me-1"></i>Bẫy giá</a>
+                            <a class="nav-link nav-link-custom text-danger fw-semibold @(reqPath.StartsWith("/baygia") ? "active" : "")" href="/BayGia"><i class="bi bi-crosshair me-1"></i>Bẫy giá</a>
                         </li>
                     </ul>
 
                     <!-- Right User Control -->
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-nowrap">
 
                         @if (User.Identity != null && User.Identity.IsAuthenticated)
                         {
                             <!-- TRẠNG THÁI: ĐÃ ĐĂNG NHẬP -->
                             
                             <!-- 1. Hiển thị Ví điểm của tài khoản -->
-                            <a href="/NguoiDung/QuanLyVi" class="text-decoration-none d-none d-md-flex align-items-center px-3 py-1 bg-light rounded-pill border shadow-sm" title="Số dư ví tài khoản">
+                            <a href="/NguoiDung/QuanLyVi" class="text-decoration-none d-none d-md-inline-flex align-items-center wallet-pill shadow-sm" title="Số dư ví tài khoản">
                                 <i class="bi bi-wallet2 text-warning me-2"></i>
-                                <span class="small fw-bold text-primary">@string.Format("{0:N0} điểm", layoutSoDuVi)</span>
+                                <span class="small fw-bold">@string.Format("{0:N0} điểm", layoutSoDuVi)</span>
                             </a>
 
                             <!-- 2. Menu thả xuống cho User đã đăng nhập -->
                             <div class="dropdown">
-                                <button class="btn btn-light rounded-circle p-2 shadow-sm border" type="button" data-bs-toggle="dropdown">
+                                <button class="btn btn-account-pill px-2 px-xl-3 d-inline-flex align-items-center gap-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-person-circle fs-5 text-primary"></i>
+                                    <span class="d-none d-xl-inline small fw-semibold text-dark text-truncate" style="max-width: 110px;">@User.Identity.Name</span>
+                                    <i class="bi bi-chevron-down small text-muted"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2">
                                     <li><h6 class="dropdown-header">Xin chào, <strong>@User.Identity.Name</strong></h6></li>
@@ -179,7 +238,7 @@
 
                             <!-- 3. Nút Đăng tin dành cho User đã đăng nhập -->
                             <a href="/TinDang/DangTin" class="btn btn-post-property">
-                                <i class="bi bi-plus-circle me-1"></i> Đăng tin mới
+                                <i class="bi bi-plus-circle me-1"></i> Đăng tin
                             </a>
                         }
                         else

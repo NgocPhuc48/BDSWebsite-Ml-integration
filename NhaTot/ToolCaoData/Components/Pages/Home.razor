@@ -1,0 +1,389 @@
+@page "/"
+@implements IDisposable
+@inject ApifyService Apify
+@inject TokenProvider TokenSource
+@inject IJSRuntime JS
+
+<PageTitle>Cào Dữ Liệu Facebook (Auto)</PageTitle>
+
+<div class="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+    <div class="max-w-[95%] mx-auto space-y-6">
+
+        <header class="flex items-center space-x-3 pb-6 border-b border-slate-200">
+            <div class="bg-blue-600 p-3 rounded-xl shadow-lg shadow-blue-600/20 text-white text-2xl leading-none">🌐</div>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Cào Dữ Liệu Facebook (Auto)</h1>
+                <p class="text-slate-500 text-sm">Tự động crawl dữ liệu từ Facebook</p>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 space-y-6">
+
+                @* ---------------- Trạng thái token ---------------- *@
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-4">🔑 Trạng thái API Token</h2>
+                    @if (TokenSource.Tokens.Count > 0)
+                    {
+                        <div class="text-sm space-y-3">
+                            <div class="text-green-700 bg-green-50 px-4 py-3 rounded-xl border border-green-200">
+                                <p class="font-semibold">✔ Đã nạp file api.txt</p>
+                                <p class="text-xs mt-0.5 opacity-90">Tổng cộng: @TokenSource.Tokens.Count tokens</p>
+                            </div>
+                            <div class="text-blue-700 bg-blue-50 px-4 py-3 rounded-xl border border-blue-200">
+                                <p class="font-semibold">Đang sử dụng Token #@(activeTokenIndex + 1)</p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-amber-700 bg-amber-50 px-4 py-3 rounded-xl border border-amber-200 text-sm font-medium">
+                            @(TokenSource.LoadError ?? "Không tìm thấy token nào.")
+                        </div>
+                    }
+                </div>
+
+                @* ---------------- Cấu hình tìm kiếm ---------------- *@
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-4">⚙ Cấu hình Tìm Kiếm</h2>
+
+                    <div class="space-y-5">
+                        <div class="space-y-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+
+                            <label class="flex items-center cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" class="sr-only" @bind="strictSearch" disabled="@IsRunning" />
+                                    <div class="block w-10 h-6 rounded-full transition-colors @(strictSearch ? "bg-blue-600" : "bg-slate-300")"></div>
+                                    <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform @(strictSearch ? "translate-x-4" : "")"></div>
+                                </div>
+                                <div class="ml-3 text-sm font-medium text-slate-700">Tìm kiếm chính xác</div>
+                            </label>
+
+                            <label class="flex items-center cursor-pointer group">
+                                <div class="relative">
+                                    <input type="checkbox" class="sr-only" @bind="filterRecent" disabled="@IsRunning" />
+                                    <div class="block w-10 h-6 rounded-full transition-colors @(filterRecent ? "bg-blue-600" : "bg-slate-300")"></div>
+                                    <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform @(filterRecent ? "translate-x-4" : "")"></div>
+                                </div>
+                                <div class="ml-3 text-sm font-medium text-slate-700">Lọc bài viết mới nhất</div>
+                            </label>
+
+                            <div class="pt-2">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">🕒 Khoảng thời gian lấy bài</label>
+                                <select @bind="timeInterval" disabled="@IsRunning"
+                                        class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed text-sm">
+                                    <option value="Since 24 Hours">24 giờ qua</option>
+                                    <option value="Past Week">1 tuần qua</option>
+                                    <option value="Past Month">1 tháng qua</option>
+                                    <option value="All Time">Tất cả thời gian</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Mục tiêu cào tổng cộng</label>
+                            <input type="number" value="@targetItems" disabled
+                                   class="w-full px-4 py-2 bg-slate-200 text-slate-600 border border-slate-300 rounded-lg outline-none cursor-not-allowed font-semibold" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">🔍 Chọn từ khóa để cào tự động</label>
+                            <div class="flex flex-col gap-2">
+                                @foreach (var kw in Keywords)
+                                {
+                                    <button @onclick="() => StartCrawling(kw)"
+                                            disabled="@(IsRunning || TokenSource.Tokens.Count == 0)"
+                                            class="@KeywordButtonClass(kw)">
+                                        <span>@(keyword == kw && IsRunning ? "⏳ " : "")@kw</span>
+                                        <span class="opacity-50">▶</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* ---------------- Khung trạng thái ---------------- *@
+                @if (status != "idle" || !string.IsNullOrEmpty(errorMsg))
+                {
+                    var t = CurrentTheme();
+                    <div class="p-4 rounded-xl border @t.Box">
+                        <h3 class="font-semibold text-sm @t.Title">@t.TitleText</h3>
+                        <p class="text-sm mt-1 @t.Text">@(string.IsNullOrEmpty(errorMsg) ? statusMessage : errorMsg)</p>
+
+                        @if (IsRunning)
+                        {
+                            <button @onclick="StopCrawling" disabled="@stopRequested"
+                                    class="mt-3 w-full py-2.5 px-4 rounded-lg font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed">
+                                ■ Dừng cào dữ liệu
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* ---------------- Bảng kết quả ---------------- *@
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-full flex flex-col">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center space-x-3">
+                            <h2 class="text-lg font-semibold">Dữ Liệu Thu Thập Được</h2>
+                            <span class="text-xs font-medium bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full">@results.Count bản ghi</span>
+                        </div>
+
+                        @if (results.Count > 0)
+                        {
+                            <button @onclick="ExportToExcel"
+                                    class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all active:scale-95">
+                                📄 Xuất ra file Excel
+                            </button>
+                        }
+                    </div>
+
+                    <div class="p-0 overflow-auto flex-grow" style="min-height:450px; max-height:700px;">
+                        @if (results.Count == 0)
+                        {
+                            <div class="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center" style="min-height:400px;">
+                                <p>Chưa có dữ liệu nào được trích xuất.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[1500px]">
+                                    <thead>
+                                        <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200 sticky top-0">
+                                            <th class="p-3 font-semibold border-r border-slate-200 text-center w-14 min-w-[56px]">#</th>
+                                            @foreach (var col in PostColumns.All)
+                                            {
+                                                <th class="p-3 font-semibold border-r border-slate-200 last:border-r-0">@col.Label</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-sm">
+                                        @for (int i = 0; i < results.Count; i++)
+                                        {
+                                            var row = results[i];
+                                            <tr class="hover:bg-slate-50/80 transition-colors">
+                                                <td class="p-3 border-r border-slate-100 text-center text-slate-400 text-xs font-medium">@(i + 1)</td>
+                                                @foreach (var col in PostColumns.All)
+                                                {
+                                                    var val = col.Get(row);
+                                                    var sval = val?.ToString() ?? "";
+
+                                                    @switch (col.Key)
+                                                    {
+                                                        case "postUrl":
+                                                            <td class="p-3 border-r border-slate-100 max-w-[220px]">
+                                                                @if (!string.IsNullOrEmpty(sval) && sval != "#")
+                                                                {
+                                                                    <a href="@sval" target="_blank" rel="noopener noreferrer" title="@sval"
+                                                                       class="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-medium transition-colors">
+                                                                        Mở bài viết ↗
+                                                                    </a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-slate-400">Không có</span>
+                                                                }
+                                                            </td>
+                                                            break;
+
+                                                        case "createTime":
+                                                            <td class="p-3 border-r border-slate-100 whitespace-nowrap text-slate-600 text-xs">
+                                                                @(string.IsNullOrEmpty(sval) ? "Không có" : sval)
+                                                            </td>
+                                                            break;
+
+                                                        case "authorProfileUrl":
+                                                            <td class="p-3 border-r border-slate-100 max-w-[150px] truncate">
+                                                                @if (!string.IsNullOrEmpty(sval) && sval != "#")
+                                                                {
+                                                                    <a href="@sval" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline text-xs">Trang cá nhân ↗</a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    @:Không có
+                                                                }
+                                                            </td>
+                                                            break;
+
+                                                        case "imageList":
+                                                        case "videoList":
+                                                            <td class="p-3 border-r border-slate-100 text-slate-500 text-xs">@sval</td>
+                                                            break;
+
+                                                        default:
+                                                            <td class="p-3 border-r border-slate-100 text-slate-700 max-w-[250px] truncate" title="@sval">
+                                                                @if (sval != "")
+                                                                {
+                                                                    @sval
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-slate-300 italic">Trống</span>
+                                                                }
+                                                            </td>
+                                                            break;
+                                                    }
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly string[] Keywords = { "mua bán nhà", "mua bán đất", "mua bán động sản" };
+
+    // ----- state (tương đương các useState / useRef trong React) -----
+    private int activeTokenIndex = 0;
+    private string keyword = "";
+    private bool strictSearch = true;
+    private bool filterRecent = true;
+    private string timeInterval = "Since 24 Hours";
+    private readonly int targetItems = 10;
+
+    private string status = "idle"; // idle | running | success | error | stopped
+    private string statusMessage = "";
+    private string errorMsg = "";
+    private List<PostRecord> results = new();
+
+    private CancellationTokenSource? cts;
+    private bool stopRequested;
+    private bool disposed;
+
+    private bool IsRunning => status == "running";
+
+    protected override void OnInitialized()
+    {
+        statusMessage = TokenSource.Tokens.Count > 0
+            ? $"Đã tự động tải {TokenSource.Tokens.Count} token từ api.txt."
+            : "";
+        if (TokenSource.Tokens.Count == 0 && TokenSource.LoadError != null)
+        {
+            errorMsg = TokenSource.LoadError;
+            status = "error";
+        }
+    }
+
+    // ----- thao tác -----
+    private async Task StartCrawling(string kw)
+    {
+        if (TokenSource.Tokens.Count == 0)
+        {
+            errorMsg = "Không có token nào được tải. Vui lòng kiểm tra tệp api.txt.";
+            status = "error";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(kw))
+        {
+            errorMsg = "Vui lòng chọn một từ khóa từ các nút bấm bên dưới.";
+            status = "error";
+            return;
+        }
+
+        keyword = kw.Trim();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+        var ct = cts.Token;
+        stopRequested = false;
+        status = "running";
+        errorMsg = "";
+        statusMessage = $"Đang cào {targetItems} bài viết cho từ khóa \"{keyword}\" trong 1 lần gọi...";
+        StateHasChanged();
+
+        var options = new CrawlOptions(keyword, strictSearch, filterRecent, timeInterval, targetItems);
+
+        var result = await Apify.CrawlAsync(
+            options, TokenSource.Tokens, activeTokenIndex,
+            onStatus: msg => UiUpdate(() => statusMessage = msg),
+            onTokenChanged: i => UiUpdate(() => activeTokenIndex = i),
+            ct);
+
+        if (disposed) return;
+
+        switch (result.Status)
+        {
+            case CrawlStatus.Success:
+                results = result.Records;
+                status = "success";
+                statusMessage = result.Message;
+                errorMsg = "";
+                break;
+            case CrawlStatus.Stopped:
+                status = "stopped";
+                statusMessage = result.Message;
+                errorMsg = "";
+                break;
+            default:
+                status = "error";
+                errorMsg = result.Message;
+                break;
+        }
+    }
+
+    private void StopCrawling()
+    {
+        if (!IsRunning || stopRequested || cts is null) return;
+        stopRequested = true;
+        statusMessage = "Đang gửi lệnh ABORT tới actor trên Apify...";
+        cts.Cancel();
+    }
+
+    private async Task ExportToExcel()
+    {
+        if (results.Count == 0) return;
+        var csv = PostColumns.BuildCsv(results);
+        var name = $"DuLieu_{System.Text.RegularExpressions.Regex.Replace(keyword, @"\s+", "_")}_{DateTime.Now:yyyy-MM-dd}.csv";
+        await JS.InvokeVoidAsync("downloadTextFile", name, csv);
+    }
+
+    // Callback từ service chạy ngoài luồng UI -> phải marshal qua InvokeAsync
+    private void UiUpdate(Action change)
+    {
+        if (disposed) return;
+        _ = InvokeAsync(() =>
+        {
+            if (disposed) return;
+            change();
+            StateHasChanged();
+        });
+    }
+
+    // ----- style helpers -----
+    private string KeywordButtonClass(string kw)
+    {
+        var disabled = IsRunning || TokenSource.Tokens.Count == 0;
+        var baseCls = "w-full py-2.5 px-4 rounded-lg font-medium flex items-center justify-between transition-all shadow-sm border ";
+        var state = disabled
+            ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed "
+            : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 active:scale-[0.98] ";
+        var active = keyword == kw && IsRunning ? "ring-2 ring-blue-500 bg-blue-100 text-blue-800" : "";
+        return baseCls + state + active;
+    }
+
+    private record Theme(string Box, string Title, string Text, string TitleText);
+
+    private Theme CurrentTheme() => status switch
+    {
+        "error" => new("bg-red-50 border-red-200", "text-red-800", "text-red-600", "Lỗi"),
+        "success" => new("bg-green-50 border-green-200", "text-green-800", "text-green-600", "Hoàn tất"),
+        "stopped" => new("bg-amber-50 border-amber-200", "text-amber-800", "text-amber-600", "Đã dừng"),
+        _ => new("bg-blue-50 border-blue-200", "text-blue-800", "text-blue-600", "Đang xử lý"),
+    };
+
+    public void Dispose()
+    {
+        disposed = true;
+        // Người dùng đóng tab khi đang cào -> huỷ luôn để service gửi ABORT, tránh actor chạy ngầm
+        try { cts?.Cancel(); } catch { }
+    }
+}

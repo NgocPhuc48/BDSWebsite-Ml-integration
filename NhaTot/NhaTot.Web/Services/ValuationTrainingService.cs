@@ -17,12 +17,18 @@ public sealed class ValuationTrainingService(NhaTotDbContext db, IWebHostEnviron
             join w in db.PhuongXas on p.MaPhuongXaDaDuyet equals w.MaPhuongXa
             where p.TrangThaiXuLy == "APPROVED" && p.LoaiNoiDungDaDuyet == "OFFER" && p.LoaiGiaoDichDaDuyet == "BAN" && p.NgayDangNguon != null
             select new { p.MaTinNguon, p.Urltin, p.HashNoiDung, p.MaDuLieu, p.MaLoaiBdsDaDuyet, p.MaPhuongXaDaDuyet, w.MaQuanHuyen,
-                p.DienTich, p.GiaRaoVnd, p.NgayDangNguon }).ToListAsync();
+                p.DienTich, p.GiaRaoVnd, p.GiaMinVnd, p.GiaMaxVnd, p.NgayDangNguon }).ToListAsync();
         return ValuationRegression.Clean(internalRows.Select(x => new ValuationSample("bds:"+x.MaBds, x.MaLoaiBds ?? 0, x.MaQuanHuyen ?? 0,
             x.MaPhuongXa ?? 0, (double)(x.Area ?? 0), (double)(x.GiaRaoVnd ?? 0), x.NgayDang!.Value))
-            .Concat(socialRows.Select(x => new ValuationSample("social:"+(x.HashNoiDung ?? x.MaTinNguon ?? x.Urltin ?? x.MaDuLieu.ToString()),
-                x.MaLoaiBdsDaDuyet ?? 0, x.MaQuanHuyen ?? 0, x.MaPhuongXaDaDuyet ?? 0,
-                (double)(x.DienTich ?? 0), (double)(x.GiaRaoVnd ?? 0), x.NgayDangNguon!.Value))));
+            .Concat(socialRows.Select(x => {
+                var parsedPrice = RealEstateTextExtractor.TryParseGiaRaoVnd(x.GiaRaoVnd);
+                var midPrice = parsedPrice ?? (x.GiaMinVnd.HasValue && x.GiaMaxVnd.HasValue
+                    ? (x.GiaMinVnd.Value + x.GiaMaxVnd.Value) / 2m
+                    : (x.GiaMinVnd ?? x.GiaMaxVnd ?? 0m));
+                return new ValuationSample("social:"+(x.HashNoiDung ?? x.MaTinNguon ?? x.Urltin ?? x.MaDuLieu.ToString()),
+                    x.MaLoaiBdsDaDuyet ?? 0, x.MaQuanHuyen ?? 0, x.MaPhuongXaDaDuyet ?? 0,
+                    (double)(x.DienTich ?? 0), (double)midPrice, x.NgayDangNguon!.Value);
+            })));
     }
     public string ArtifactPath(string filename)
     {

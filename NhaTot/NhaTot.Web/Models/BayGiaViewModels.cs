@@ -94,11 +94,14 @@ namespace NhaTot.Web.Models
         public string? UrlTinGoc { get; set; } // Link chi tiết bài đăng hoặc Link Profile/Group FB
         public bool CoLinkMxh { get; set; }
         public DateTime? NgayDang { get; set; }
+        public double? DoTuongDongPhanTram { get; set; }
+        public List<string> LyDoTuongDong { get; set; } = new List<string>();
     }
 
     public class MucTieuTheoDoiChiTietDto
     {
         public long MaMucTieu { get; set; }
+        public string? TenTinh { get; set; }
         public string? TenQuanHuyen { get; set; }
         public string? TenPhuongXa { get; set; }
         public string? TenLoaiBds { get; set; }
@@ -127,5 +130,14 @@ namespace NhaTot.Web.Models
         public TaoMucTieuBayGiaViewModel FormTao { get; set; } = new TaoMucTieuBayGiaViewModel();
         public List<MucTieuTheoDoiChiTietDto> DanhSachMucTieu { get; set; } = new List<MucTieuTheoDoiChiTietDto>();
         public long? MucTieuDangXemId { get; set; }
+    }
+
+    public class BayGiaChiTietViewModel
+    {
+        public MucTieuTheoDoiChiTietDto MucTieu { get; set; } = new();
+        public List<KetQuaKhopItemDto> TinDangTuongDong { get; set; } = new();
+        public List<KetQuaKhopItemDto> TinFacebookTuongDong { get; set; } = new();
+        public double NguongTuongDongPhanTram { get; set; } = 80.0;
+        public decimal SoDuViHienTai { get; set; }
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
+using NhaTot.Web.Models;
+using NhaTot.Web.Services;
 
 namespace NhaTot.Web.Areas.Admin.Controllers;
 
@@ -10,14 +12,16 @@ namespace NhaTot.Web.Areas.Admin.Controllers;
 public class KiemDuyetTinController : Controller
 {
     private readonly NhaTotDbContext _context;
+    private readonly ListingModerationService _moderation;
 
-    public KiemDuyetTinController(NhaTotDbContext context)
+    public KiemDuyetTinController(NhaTotDbContext context, ListingModerationService moderation)
     {
         _context = context;
+        _moderation = moderation;
     }
 
     // GET: Admin/KiemDuyetTin?trangThai=PENDING
-    public async Task<IActionResult> Index(string trangThai = "PENDING")
+    public async Task<IActionResult> Index(string trangThai = "PENDING", int page = 1)
     {
         ViewBag.CurrentStatus = trangThai;
 
@@ -26,6 +30,7 @@ public class KiemDuyetTinController : Controller
                 .ThenInclude(b => b!.MaLoaiBdsNavigation)
             .Include(t => t.MaBdsNavigation)
                 .ThenInclude(b => b!.MaPhuongXaNavigation)
+                    .ThenInclude(p => p!.MaQuanHuyenNavigation)
             .Include(t => t.MaNguoiDangNavigation)
             .AsQueryable();
 
@@ -34,7 +39,21 @@ public class KiemDuyetTinController : Controller
             query = query.Where(t => t.TrangThai == trangThai);
         }
 
-        var list = await query.OrderByDescending(t => t.NgayDang).ToListAsync();
+        const int pageSize = 20;
+        var totalItems = await query.CountAsync();
+        page = PaginationViewModel.NormalizePage(page, pageSize, totalItems);
+        ViewBag.Pagination = new PaginationViewModel(page, pageSize, totalItems);
+
+        var list = await query
+            .OrderByDescending(t => t.NgayDang)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var gbtModel = await _moderation.GetOrTrainModelAsync();
+        var moderationMap = list.ToDictionary(t => t.MaTin, t => _moderation.AssessListing(t, gbtModel));
+        ViewBag.GbtModel = gbtModel;
+        ViewBag.ModerationMap = moderationMap;
 
         // Thá»‘ng kÃª sá»‘ lÆ°á»£ng cho cÃ¡c tháº» Tab
         ViewBag.CountPending = await _context.TinDangs.CountAsync(t => t.TrangThai == "PENDING");
@@ -73,6 +92,9 @@ public async Task<IActionResult> GetDetail(long id)
         string tenLoai = bds?.MaLoaiBdsNavigation?.TenLoaiBds ?? "";
         bool isDat = tenLoai.Contains("Đất", StringComparison.OrdinalIgnoreCase) || chiTietDat != null;
 
+        var gbtModel = await _moderation.GetOrTrainModelAsync();
+        var moderation = _moderation.AssessListing(item, gbtModel);
+
         return Json(new
         {
             success = true,
@@ -88,6 +110,15 @@ public async Task<IActionResult> GetDetail(long id)
                 lyDoTuChoi = item.LyDoTuChoi ?? "",
                 danhSachAnhDatDai = item.DanhSachAnhDatDai,
                 danhSachAnhSoDoSoHong = item.DanhSachAnhSoDoSoHong,
+                moderation = new
+                {
+                    level = moderation.Level.ToString(),
+                    badgeText = moderation.BadgeText,
+                    summary = moderation.Summary,
+                    predictedPriceVnd = moderation.PredictedPriceVnd,
+                    deviationPercent = moderation.DeviationPercent,
+                    modelName = moderation.ModelName
+                },
 
                 nguoiDang = new
                 {

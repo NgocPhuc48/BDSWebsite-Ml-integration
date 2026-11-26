@@ -1,26 +1,70 @@
 @model List<NhaTot.Web.Models.KetQuaKhopItemDto>
-<section class="card-body p-4 border-bottom bg-light">
-    <h6 class="fw-bold"><i class="bi bi-house-heart me-1"></i>Gợi ý tương đồng với mục tiêu <span class="badge bg-primary">@Model.Count tin</span></h6>
-    <p class="small text-muted">Tin đăng Nhà Tốt và bài MXH đã duyệt, cùng loại BĐS, giao dịch và khu vực; giá không dưới mức tối thiểu và tối đa cao hơn ngân sách 10%, diện tích đạt yêu cầu. Các tiêu chí khác như pháp lý, hướng và số phòng cần kiểm tra trong tin. Gợi ý này chưa được tính là khớp lệnh để đối soát cọc.</p>
+
+<div class="p-4">
+    <p class="small text-muted mb-3">
+        Các bất động sản đạt từ <strong>80% tương đồng</strong> trở lên dựa trên loại hình, khu vực, ngân sách, diện tích và tiêu chí bổ sung bạn đã đặt.
+    </p>
+
     @if (Model.Count == 0)
     {
-        <p class="text-muted small mb-0">Chưa có thêm tin tương đồng với mục tiêu này. Tin đã khớp được hiển thị ở phần kết quả bên dưới.</p>
+        <div class="p-4 rounded-3 bg-light text-center text-muted small">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            Chưa có thêm bất động sản nào đạt ngưỡng tương đồng &ge; 80% cho mục tiêu này.
+        </div>
     }
     else
     {
         <div class="row g-3">
-        @foreach (var item in Model)
-        {
-            <div class="col-md-6 col-lg-4">
-                <article class="card card-body h-100">
-                    <span class="small text-success mb-2">@(item.CoLinkMxh ? "Facebook · Đã kiểm duyệt" : "Nhà Tốt · Tin đã duyệt")</span>
-                    <h6>@item.TieuDe</h6>
-                    <strong class="text-danger">@item.GiaHienThi</strong>
-                    <p class="small text-muted mt-2">@item.TenLoaiBds · @item.DienTich?.ToString("N2") m²<br />@item.TenKhuVuc</p>
-                    <a href="@item.UrlTinGoc" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm mt-auto">@(item.CoLinkMxh ? "Xem bài Facebook gốc" : "Xem chi tiết tin đăng")</a>
-                </article>
-            </div>
-        }
+            @foreach (var item in Model)
+            {
+                var score = item.DoTuongDongPhanTram ?? 80;
+                var scoreClass = score >= 90 ? "bg-success" : "bg-primary";
+                var scoreBadge = score >= 90 ? "bg-success-subtle text-success" : "bg-primary-subtle text-primary";
+
+                <div class="col-md-6 col-lg-4">
+                    <article class="baygia-result-card h-100 p-3 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <span class="badge rounded-pill @(item.CoLinkMxh ? "bg-primary-subtle text-primary" : "bg-light text-secondary border")">
+                                @(item.CoLinkMxh ? "Facebook MXH" : "Nhà Tốt")
+                            </span>
+                            <span class="badge rounded-pill fw-semibold @scoreBadge">
+                                @score.ToString("0.#")% tương đồng
+                            </span>
+                        </div>
+
+                        <div class="progress mb-2" style="height: 4px;">
+                            <div class="progress-bar @scoreClass" role="progressbar" style="width: @(Math.Clamp(score, 0, 100))%" aria-valuenow="@score" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+
+                        <h6 class="fw-bold text-dark text-truncate-2 mb-2">@item.TieuDe</h6>
+
+                        <div class="d-flex align-items-baseline justify-content-between mb-2">
+                            <strong class="text-danger fs-6">@item.GiaHienThi</strong>
+                            <span class="small text-muted fw-semibold">@(item.DienTich.HasValue ? $"{item.DienTich.Value:0.##} m²" : "--")</span>
+                        </div>
+
+                        <div class="small text-muted text-truncate mb-2" title="@item.TenKhuVuc">
+                            <i class="bi bi-geo-alt me-1 text-primary"></i>@(item.TenKhuVuc ?? "Nghệ An / Hà Tĩnh")
+                        </div>
+
+                        @if (item.LyDoTuongDong != null && item.LyDoTuongDong.Any())
+                        {
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                @foreach (var reason in item.LyDoTuongDong.Take(3))
+                                {
+                                    <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.72rem;">
+                                        &#10003; @reason
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        <a href="@item.UrlTinGoc" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm rounded-pill mt-auto w-100 fw-semibold">
+                            @(item.CoLinkMxh ? "Xem bài Facebook" : "Xem chi tiết")
+                        </a>
+                    </article>
+                </div>
+            }
         </div>
     }
-</section>
+</div>

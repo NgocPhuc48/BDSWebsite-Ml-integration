@@ -12,6 +12,7 @@ if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IAiDinhGiaService, AiDinhGiaService>();
 builder.Services.AddScoped<ValuationTrainingService>();
+builder.Services.AddScoped<ListingModerationService>();
 builder.Services.AddHostedService<ValuationTrainingWorker>();
 builder.Services.AddHttpClient<ApifyCrawlService>();
 builder.Services.AddScoped<ApifyTokenStore>();
@@ -22,9 +23,16 @@ builder.Services.AddScoped<CrawlSuggestionService>();
 builder.Services.AddHostedService<CrawlScheduleWorker>();
 builder.Services.AddMemoryCache();
 
-// Đăng ký DbContext kết nối SQL Server
+// Đăng ký DbContext kết nối SQL Server (hoặc MySQL nếu connection string cấu hình Port=3306)
 builder.Services.AddDbContext<NhaTotDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Server=localhost;Database=NhaTot;User Id=sa;Password=123456;TrustServerCertificate=True;";
+    if (connectionString.Contains("Port=3306", StringComparison.OrdinalIgnoreCase))
+        options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 46)));
+    else
+        options.UseSqlServer(connectionString);
+});
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

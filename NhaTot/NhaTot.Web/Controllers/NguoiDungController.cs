@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
+using NhaTot.Web.Models;
 
 namespace NhaTot.Web.Controllers
 {
@@ -23,17 +24,26 @@ namespace NhaTot.Web.Controllers
         }
 
         // GET: /NguoiDung/QuanLyTin (Danh sách tin của người dùng hiện tại)
-        public async Task<IActionResult> QuanLyTin()
+        public async Task<IActionResult> QuanLyTin(int page = 1)
         {
             long userId = GetCurrentUserId();
-            var danhSachTin = await _context.TinDangs
+            var query = _context.TinDangs
                 .Include(t => t.MaBdsNavigation)
                     .ThenInclude(b => b!.MaLoaiBdsNavigation)
                 .Include(t => t.MaBdsNavigation)
                     .ThenInclude(b => b!.MaPhuongXaNavigation)
                         .ThenInclude(p => p!.MaQuanHuyenNavigation)
-                .Where(t => t.MaNguoiDang == userId)
+                .Where(t => t.MaNguoiDang == userId);
+
+            const int pageSize = 15;
+            var totalItems = await query.CountAsync();
+            page = PaginationViewModel.NormalizePage(page, pageSize, totalItems);
+            ViewBag.Pagination = new PaginationViewModel(page, pageSize, totalItems);
+
+            var danhSachTin = await query
                 .OrderByDescending(t => t.NgayDang)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             return View(danhSachTin);

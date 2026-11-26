@@ -57,3 +57,85 @@ foreach (var range in property.GetCustomAttributes(typeof(System.ComponentModel.
 }
 }
 Console.WriteLine("Passed vi-VN/en-US: MVC binding of 1 billion and full criteria; invalid prices rejected; decimal boundaries verified for BayGia and Admin review. No wallet changes.");
+
+// --- BayGia >= 80% Recommendation Engine Tests ---
+var demandBase = new NhaTot.Web.Services.BayGiaDemandProfile(
+    TransactionType: "BAN",
+    PropertyTypeId: 9,
+    PropertyTypeName: "Đất nền",
+    ProvinceId: 1,
+    DistrictId: 1,
+    WardId: 1,
+    MinPrice: 1_500_000_000m,
+    MaxPrice: 2_500_000_000m,
+    MinArea: 100m,
+    Direction: "Đông Nam",
+    LegalStatus: "Sổ đỏ",
+    MinBedrooms: null,
+    MinFrontageM: 5m);
+
+var exactCand = new NhaTot.Web.Services.BayGiaCandidate(
+    "TinDang", 101, "BAN", 9, "Đất nền", 1, 1, 1,
+    2_200_000_000m, 120m, "DongNam", "Sổ đỏ chính chủ", null, 6m, DateTime.UtcNow);
+var exactRes = NhaTot.Web.Services.BayGiaRecommendationEngine.CalculateSimilarity(demandBase, exactCand);
+if (exactRes.ScorePercent != 100.0)
+    throw new Exception($"Expected 100% for exact match, got {exactRes.ScorePercent}%");
+
+var nearCand = new NhaTot.Web.Services.BayGiaCandidate(
+    "TinDang", 102, "BAN", 1, "Đất nền / Đất thổ cư", 1, 1, 2,
+    2_625_000_000m, 110m, "DongNam", "Sổ hồng", null, 5m, DateTime.UtcNow.AddDays(-1));
+var nearRes = NhaTot.Web.Services.BayGiaRecommendationEngine.CalculateSimilarity(demandBase, nearCand);
+if (nearRes.ScorePercent < 80.0 || nearRes.ScorePercent >= 100.0)
+    throw new Exception($"Expected near match in [80, 100), got {nearRes.ScorePercent}%");
+
+var lowCand = new NhaTot.Web.Services.BayGiaCandidate(
+    "TinDang", 103, "BAN", 7, "Căn hộ", 2, 10, 50,
+    4_500_000_000m, 65m, "Tay", "Chờ sổ", null, 3m, DateTime.UtcNow);
+var lowRes = NhaTot.Web.Services.BayGiaRecommendationEngine.CalculateSimilarity(demandBase, lowCand);
+if (lowRes.ScorePercent >= 80.0)
+    throw new Exception($"Expected low match < 80%, got {lowRes.ScorePercent}%");
+
+var wrongTxCand = exactCand with { Id = 104, TransactionType = "CHO_THUE" };
+var wrongTxRes = NhaTot.Web.Services.BayGiaRecommendationEngine.CalculateSimilarity(demandBase, wrongTxCand);
+if (wrongTxRes.ScorePercent != 0.0)
+    throw new Exception($"Expected 0% for wrong transaction type, got {wrongTxRes.ScorePercent}%");
+
+var filtered = NhaTot.Web.Services.BayGiaRecommendationEngine.FilterRecommendations(
+    demandBase, new[] { lowCand, nearCand, wrongTxCand, exactCand });
+if (filtered.Count != 2 || filtered[0].Candidate.Id != 101 || filtered[1].Candidate.Id != 102)
+    throw new Exception("FilterRecommendations did not enforce >= 80% threshold and descending sort order.");
+
+Console.WriteLine($"Passed BayGiaRecommendationEngine tests: exact={exactRes.ScorePercent}%, near={nearRes.ScorePercent}%, low={lowRes.ScorePercent}%, wrongTx={wrongTxRes.ScorePercent}%, filtered={filtered.Count}/4 (>=80%).");
+
+// --- Functional tests for BayGia/ChiTiet & separate TinDang vs Facebook >= 80% lists ---
+var chiTietMethod = typeof(BayGiaController).GetMethod("ChiTiet", new[] { typeof(long) });
+if (chiTietMethod == null || !chiTietMethod.GetCustomAttributes(typeof(HttpGetAttribute), false).Any())
+    throw new Exception("BayGiaController.ChiTiet(long) with [HttpGet] is missing.");
+if (!typeof(BayGiaController).GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true).Any())
+    throw new Exception("BayGiaController must require [Authorize].");
+
+var fbMatch = new NhaTot.Web.Services.BayGiaCandidate(
+    "CrawlApproved", 201, "BAN", 9, "Đất nền", 1, 1, 1,
+    2_300_000_000m, 110m, null, null, null, null, DateTime.UtcNow);
+var fbLow = new NhaTot.Web.Services.BayGiaCandidate(
+    "CrawlApproved", 202, "BAN", 7, "Căn hộ", 2, 10, 50,
+    5_500_000_000m, 65m, null, null, null, null, DateTime.UtcNow);
+
+var fbFiltered = NhaTot.Web.Services.BayGiaRecommendationEngine.FilterRecommendations(
+    demandBase, new[] { fbMatch, fbLow });
+if (fbFiltered.Count != 1 || fbFiltered[0].Candidate.Id != 201 || fbFiltered[0].Similarity.ScorePercent < 80.0)
+    throw new Exception($"Facebook recommendation filter failed: count={fbFiltered.Count}, score={(fbFiltered.Count > 0 ? fbFiltered[0].Similarity.ScorePercent : 0)}%");
+
+var chiTietViewPath = Path.Combine(Directory.GetCurrentDirectory(), "NhaTot.Web", "Views", "BayGia", "ChiTiet.cshtml");
+var bangMucTieuViewPath = Path.Combine(Directory.GetCurrentDirectory(), "NhaTot.Web", "Views", "BayGia", "_BangMucTieu.cshtml");
+if (File.Exists(chiTietViewPath) && File.Exists(bangMucTieuViewPath))
+{
+    var ctHtml = File.ReadAllText(chiTietViewPath);
+    var tableHtml = File.ReadAllText(bangMucTieuViewPath);
+    if (!ctHtml.Contains("TinDangTuongDong", StringComparison.Ordinal) || !ctHtml.Contains("TinFacebookTuongDong", StringComparison.Ordinal))
+        throw new Exception("ChiTiet.cshtml missing TinDangTuongDong or TinFacebookTuongDong sections.");
+    if (!tableHtml.Contains("/BayGia/ChiTiet/", StringComparison.Ordinal))
+        throw new Exception("_BangMucTieu.cshtml does not link to /BayGia/ChiTiet/.");
+}
+
+Console.WriteLine($"Passed BayGia ChiTiet functional tests: action verified, fbMatch={fbFiltered[0].Similarity.ScorePercent}% (>=80%), view links verified.");

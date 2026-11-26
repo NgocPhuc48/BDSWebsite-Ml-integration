@@ -52,4 +52,40 @@ public partial class SocialBotController
         catch (InvalidOperationException) { model.HasToken = false; }
         return View(model);
     }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> NapTuApiTxt([FromServices] ApifyTokenStore tokens,
+        [FromServices] IHttpClientFactory clients, [FromServices] IWebHostEnvironment environment)
+    {
+        var apiFile = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "ToolCaoData", "api.txt"));
+        if (!System.IO.File.Exists(apiFile))
+        {
+            TempData["ConnectionError"] = "Không tìm thấy ToolCaoData/api.txt.";
+            return RedirectToAction(nameof(KetNoi));
+        }
+
+        var candidates = await System.IO.File.ReadAllLinesAsync(apiFile, HttpContext.RequestAborted);
+        foreach (var line in candidates)
+        {
+            var token = line.Trim();
+            if (token.Length is < 10 or > 512 || token.StartsWith('#') || token.Any(char.IsWhiteSpace)) continue;
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.apify.com/v2/users/me");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var response = await clients.CreateClient("ApifyConnectionCheck").SendAsync(request, HttpContext.RequestAborted);
+                if (!response.IsSuccessStatusCode) continue;
+
+                await tokens.SaveAsync(token, HttpContext.RequestAborted);
+                TempData["ConnectionMessage"] = "Đã đọc api.txt, kiểm tra và lưu token Apify hợp lệ vào hệ thống.";
+                return RedirectToAction(nameof(KetNoi));
+            }
+            catch (HttpRequestException) { break; }
+            catch (TaskCanceledException) { break; }
+        }
+
+        TempData["ConnectionError"] = "Không tìm thấy token hợp lệ trong api.txt.";
+        return RedirectToAction(nameof(KetNoi));
+    }
 }

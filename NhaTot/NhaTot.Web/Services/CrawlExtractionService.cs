@@ -18,7 +18,21 @@ public sealed class CrawlExtractionService(NhaTotDbContext context)
     public static void Apply(DuLieuThuThap entity, List<string> provinces, List<WardCandidate> wards)
     {
         var result = RealEstateTextExtractor.Extract(entity.NoiDungGoc ?? "", provinces, wards);
-        entity.GiaRaoVnd ??= result.Price;
+        if (string.IsNullOrWhiteSpace(entity.GiaRaoVnd) && !entity.GiaMinVnd.HasValue && !entity.GiaMaxVnd.HasValue)
+        {
+            if (result.ExactPrice.HasValue)
+            {
+                entity.GiaRaoVnd = result.ExactPrice.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                entity.GiaMinVnd = null;
+                entity.GiaMaxVnd = null;
+            }
+            else if (result.PriceMin.HasValue && result.PriceMax.HasValue)
+            {
+                entity.GiaRaoVnd = null;
+                entity.GiaMinVnd = result.PriceMin;
+                entity.GiaMaxVnd = result.PriceMax;
+            }
+        }
         entity.DienTich ??= result.Area;
         entity.LoaiBdsnguon ??= result.Type;
         entity.TinhNguon ??= result.Province;

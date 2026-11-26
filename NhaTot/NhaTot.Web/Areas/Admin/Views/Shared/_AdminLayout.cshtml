@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Admin NhaTot</title>
 
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Bootstrap 5 CSS & Icons -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
@@ -14,29 +19,32 @@
             --sidebar-width: 260px;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: #f4f6f9;
+            overflow-x: hidden;
         }
         .admin-wrapper {
             display: flex;
             min-height: 100vh;
+            position: relative;
         }
         /* Sidebar Styling */
         .sidebar {
             width: var(--sidebar-width);
-            background: #1e293b;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             color: #94a3b8;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sidebar .brand {
-            padding: 1.25rem 1.5rem;
-            font-size: 1.25rem;
+            padding: 1.1rem 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #fff;
-            background: #0f172a;
-            border-bottom: 1px solid #334155;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
             text-decoration: none;
         }
         .sidebar-menu {
@@ -55,55 +63,120 @@
         .nav-link-custom {
             display: flex;
             align-items: center;
-            padding: 0.6rem 0.8rem;
+            padding: 0.6rem 0.85rem;
             color: #cbd5e1;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.9rem;
             font-weight: 500;
             transition: all 0.2s ease;
             margin-bottom: 2px;
         }
         .nav-link-custom i {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             margin-right: 0.75rem;
             width: 20px;
             text-align: center;
         }
         .nav-link-custom:hover {
-            background-color: #334155;
+            background-color: rgba(255, 255, 255, 0.08);
             color: #fff;
         }
         .nav-link-custom.active {
-            background-color: #0284c7;
+            background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
             color: #fff;
             font-weight: 600;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
         }
         /* Main Content Styling */
         .main-content {
             flex-grow: 1;
+            min-width: 0;
             background-color: #f8fafc;
             display: flex;
             flex-direction: column;
         }
         .top-navbar {
-            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid #e2e8f0;
-            padding: 0.8rem 1.8rem;
+            padding: 0.75rem 1.5rem;
+        }
+        .btn-sidebar-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .btn-sidebar-toggle:hover {
+            background: #f1f5f9;
+            color: #0284c7;
+            border-color: #cbd5e1;
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 1040;
+            backdrop-filter: blur(2px);
         }
         .content-body {
-            padding: 1.8rem;
+            padding: 1.5rem 1.8rem;
             flex-grow: 1;
+        }
+
+        @@media (min-width: 992px) {
+            .admin-wrapper.sidebar-collapsed .sidebar {
+                margin-left: calc(var(--sidebar-width) * -1);
+            }
+        }
+        @@media (max-width: 991.98px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                z-index: 1045;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 24px rgba(15, 23, 42, 0.25);
+            }
+            .admin-wrapper.sidebar-open .sidebar {
+                transform: translateX(0);
+            }
+            .admin-wrapper.sidebar-open .sidebar-backdrop {
+                display: block;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="admin-wrapper">
+    <div class="admin-wrapper" id="adminWrapper">
+        <script>
+            if (window.innerWidth >= 992 && localStorage.getItem('nhatot_admin_sidebar_collapsed') === '1') {
+                document.getElementById('adminWrapper').classList.add('sidebar-collapsed');
+            }
+        </script>
+        <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="brand d-flex align-items-center">
-                <i class="bi bi-building-fill-gear text-info me-2"></i> NhaTot Admin
-            </a>
+        <aside class="sidebar" id="adminSidebar">
+            <div class="brand d-flex align-items-center justify-content-between">
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-white text-decoration-none d-flex align-items-center">
+                    <i class="bi bi-building-fill-gear text-info me-2"></i> NhaTot Admin
+                </a>
+                <button type="button" class="btn btn-sm btn-link text-light d-lg-none p-1" id="btnCloseSidebarMobile" aria-label="Đóng menu">
+                    <i class="bi bi-x-lg fs-5"></i>
+                </button>
+            </div>
 
             <div class="sidebar-menu">
                 @{
@@ -178,12 +251,15 @@
         <!-- Main Content -->
         <div class="main-content">
             <!-- Top Bar -->
-            <header class="top-navbar d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="fs-6 fw-bold text-dark">PropTech Nghệ An - Hệ thống Quản trị NhaTot</span>
+            <header class="top-navbar d-flex justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn-sidebar-toggle" id="btnToggleSidebar" title="Đóng / mở menu bên">
+                        <i class="bi bi-layout-sidebar-inset fs-5"></i>
+                    </button>
+                    <span class="fs-6 fw-bold text-dark text-truncate">PropTech Nghệ An - Hệ thống Quản trị NhaTot</span>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-6">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-6 text-nowrap">
                         <i class="bi bi-person-circle me-1"></i> Quản trị viên
                     </span>
                 </div>
@@ -197,6 +273,37 @@
     </div>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const wrapper = document.getElementById('adminWrapper');
+            const toggleBtn = document.getElementById('btnToggleSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const closeMobile = document.getElementById('btnCloseSidebarMobile');
+            const storageKey = 'nhatot_admin_sidebar_collapsed';
+
+            if (!wrapper || !toggleBtn) return;
+
+            toggleBtn.addEventListener('click', function () {
+                if (window.innerWidth < 992) {
+                    wrapper.classList.toggle('sidebar-open');
+                } else {
+                    const collapsed = wrapper.classList.toggle('sidebar-collapsed');
+                    localStorage.setItem(storageKey, collapsed ? '1' : '0');
+                }
+            });
+
+            if (backdrop) {
+                backdrop.addEventListener('click', function () {
+                    wrapper.classList.remove('sidebar-open');
+                });
+            }
+            if (closeMobile) {
+                closeMobile.addEventListener('click', function () {
+                    wrapper.classList.remove('sidebar-open');
+                });
+            }
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

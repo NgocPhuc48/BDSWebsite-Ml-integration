@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -41,13 +41,16 @@ namespace NhaTot.Web.Controllers
             decimal soDu = vi.SoDuDiem ?? 0;
 
             // Load danh sách danh mục hỗ trợ cascade chọn
-            ViewBag.DanhSachTinhThanh = await _context.TinhThanhs.Where(t => t.TrangThai == true).ToListAsync();
+            var tinhThanhs = await _context.TinhThanhs.Where(t => t.TrangThai == true).ToListAsync();
+            var tinhMap = tinhThanhs.ToDictionary(t => t.MaTinh, t => t.TenTinh ?? "");
+            ViewBag.DanhSachTinhThanh = tinhThanhs;
             ViewBag.DanhSachLoaiBds = await _context.LoaiBds.Where(l => l.TrangThai == true).ToListAsync();
 
             // Lấy danh sách mục tiêu bẫy giá của người dùng
             var mucTieus = await _context.MucTieuTheoDoiGias
                 .Include(m => m.MaQuanHuyenNavigation)
                 .Include(m => m.MaPhuongXaNavigation)
+                    .ThenInclude(p => p!.MaQuanHuyenNavigation)
                 .Include(m => m.MaLoaiBdsNavigation)
                 .Where(m => m.MaNguoiDung == userId)
                 .OrderByDescending(m => m.NgayTao)
@@ -172,12 +175,29 @@ namespace NhaTot.Web.Controllers
 
                 string loaiGiaoDich = m.LoaiGiaoDich ?? "BAN";
                 var danhSachKhop = await TimKiemKetQuaKhopAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds, loaiGiaoDich, minGia, maxGia, tieuChiDetail);
-                var goiY = await _suggestions.FindAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds,
-                    loaiGiaoDich, minGia, maxGia, tieuChiDetail.DienTichMin, m.MaTinh);
-                var tinDangTuongDong = await _suggestions.FindListingsAsync(m.MaQuanHuyen, m.MaPhuongXa, m.MaLoaiBds,
-                    loaiGiaoDich, minGia, maxGia, tieuChiDetail.DienTichMin, m.MaTinh,
+
+                var resolvedProvinceId = m.MaTinh
+                    ?? m.MaQuanHuyenNavigation?.MaTinh
+                    ?? m.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.MaTinh;
+
+                var demand = new NhaTot.Web.Services.BayGiaDemandProfile(
+                    TransactionType: loaiGiaoDich,
+                    PropertyTypeId: m.MaLoaiBds ?? 0,
+                    PropertyTypeName: m.MaLoaiBdsNavigation?.TenLoaiBds,
+                    ProvinceId: resolvedProvinceId,
+                    DistrictId: m.MaQuanHuyen,
+                    WardId: m.MaPhuongXa,
+                    MinPrice: minGia,
+                    MaxPrice: maxGia > 0 ? maxGia : null,
+                    MinArea: tieuChiDetail.DienTichMin,
+                    Direction: tieuChiDetail.Huong,
+                    LegalStatus: tieuChiDetail.PhapLy,
+                    MinBedrooms: tieuChiDetail.SoPhongNgu,
+                    MinFrontageM: tieuChiDetail.MatTienMinM);
+
+                var goiY = await _suggestions.FindRecommendedAsync(
+                    demand,
                     danhSachKhop.Where(x => x.NguonTin == "TinDang").Select(x => x.Id).ToArray());
-                goiY.AddRange(tinDangTuongDong);
 
                 bool daHetHan = m.NgayHetHan.HasValue && now >= m.NgayHetHan.Value;
                 string trangThaiHienTai = m.TrangThai ?? "DANG_THEO_DOI";
@@ -229,6 +249,7 @@ namespace NhaTot.Web.Controllers
                 var itemDto = new MucTieuTheoDoiChiTietDto
                 {
                     MaMucTieu = m.MaMucTieu,
+                    TenTinh = resolvedProvinceId.HasValue && tinhMap.TryGetValue(resolvedProvinceId.Value, out var tenT) ? tenT : null,
                     TenQuanHuyen = m.MaQuanHuyenNavigation?.TenQuanHuyen,
                     TenPhuongXa = m.MaPhuongXaNavigation?.TenPhuongXa,
                     TenLoaiBds = m.MaLoaiBdsNavigation?.TenLoaiBds,
@@ -245,7 +266,7 @@ namespace NhaTot.Web.Controllers
                     TieuChiChiTiet = tieuChiDetail,
                     DanhSachMoTaTieuChi = moTaList,
                     DanhSachKhop = danhSachKhop,
-                    GoiYTuongDong = goiY.OrderByDescending(x => x.NgayDang).ToList()
+                    GoiYTuongDong = goiY.OrderByDescending(x => x.DoTuongDongPhanTram ?? 0).ThenByDescending(x => x.NgayDang).ToList()
                 };
 
                 viewModel.DanhSachMucTieu.Add(itemDto);
@@ -258,6 +279,126 @@ namespace NhaTot.Web.Controllers
             }
 
             return View(viewModel);
+        }
+
+        // GET: /BayGia/ChiTiet/5
+        [HttpGet]
+        public async Task<IActionResult> ChiTiet(long id)
+        {
+            long userId = GetCurrentUserId();
+            var m = await _context.MucTieuTheoDoiGias
+                .Include(x => x.MaQuanHuyenNavigation)
+                .Include(x => x.MaPhuongXaNavigation)
+                    .ThenInclude(p => p!.MaQuanHuyenNavigation)
+                .Include(x => x.MaLoaiBdsNavigation)
+                .FirstOrDefaultAsync(x => x.MaMucTieu == id && (x.MaNguoiDung == userId || User.IsInRole("Admin")));
+
+            if (m == null) return NotFound();
+
+            var vi = await LayHoacTaoViAsync(m.MaNguoiDung ?? userId);
+            var tinhMap = await _context.TinhThanhs.AsNoTracking()
+                .ToDictionaryAsync(t => t.MaTinh, t => t.TenTinh ?? "");
+
+            var targetCreated = m.NgayTao ?? DateTime.Now;
+            var ncCandidates = await _context.NhuCauTimKiems
+                .AsNoTracking()
+                .Where(n => n.MaNguoiDung == m.MaNguoiDung && n.MaLoaiBds == m.MaLoaiBds &&
+                            (n.MaPhuongXa == m.MaPhuongXa || (!n.MaPhuongXa.HasValue && !m.MaPhuongXa.HasValue)))
+                .ToListAsync();
+            var nc = ncCandidates
+                .OrderBy(n => Math.Abs(((n.NgayTao ?? targetCreated) - targetCreated).TotalSeconds))
+                .FirstOrDefault();
+
+            decimal? minGia = nc?.NganSachMinVnd;
+            decimal maxGia = m.GiaMongMuonVnd ?? nc?.NganSachMaxVnd ?? 0;
+            var tieuChiDetail = new TieuChiBayGiaDetailDto();
+            var moTaList = new List<string>();
+
+            if (nc?.DienTichMin.HasValue == true)
+            {
+                tieuChiDetail.DienTichMin = nc.DienTichMin;
+                moTaList.Add($"Diện tích ≥ {nc.DienTichMin:N0} m²");
+            }
+            if (nc != null && !string.IsNullOrEmpty(nc.TieuChiThem))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<TieuChiBayGiaDetailDto>(nc.TieuChiThem, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (parsed != null)
+                    {
+                        tieuChiDetail = parsed;
+                        if (tieuChiDetail.DienTichMin.HasValue && !moTaList.Any(x => x.Contains("Diện tích")))
+                            moTaList.Add($"Diện tích ≥ {tieuChiDetail.DienTichMin:N0} m²");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.Huong)) moTaList.Add($"Hướng: {tieuChiDetail.Huong}");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.PhapLy)) moTaList.Add($"Pháp lý: {tieuChiDetail.PhapLy}");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.LoaiDat)) moTaList.Add($"Loại đất: {tieuChiDetail.LoaiDat}");
+                        if (tieuChiDetail.MatTienMinM.HasValue) moTaList.Add($"Mặt tiền ≥ {tieuChiDetail.MatTienMinM:N1} m");
+                        if (tieuChiDetail.ChieuSauMinM.HasValue) moTaList.Add($"Chiều sâu ≥ {tieuChiDetail.ChieuSauMinM:N1} m");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.LoaiDuong)) moTaList.Add($"Loại đường: {tieuChiDetail.LoaiDuong}");
+                        if (tieuChiDetail.DoRongDuongMinM.HasValue) moTaList.Add($"Đường rộng ≥ {tieuChiDetail.DoRongDuongMinM:N1} m");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.HinhDangDat)) moTaList.Add($"Hình dáng: {tieuChiDetail.HinhDangDat}");
+                        if (tieuChiDetail.SoTangMin.HasValue) moTaList.Add($"Số tầng ≥ {tieuChiDetail.SoTangMin}");
+                        if (tieuChiDetail.SoPhongNgu.HasValue) moTaList.Add($"Số phòng ngủ ≥ {tieuChiDetail.SoPhongNgu}");
+                        if (tieuChiDetail.SoWcMin.HasValue) moTaList.Add($"Số WC ≥ {tieuChiDetail.SoWcMin}");
+                        if (tieuChiDetail.NamXayDungMin.HasValue) moTaList.Add($"Năm XD từ {tieuChiDetail.NamXayDungMin}");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.TinhTrangNha)) moTaList.Add($"Tình trạng: {tieuChiDetail.TinhTrangNha}");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.NoiThat)) moTaList.Add($"Nội thất: {tieuChiDetail.NoiThat}");
+                        if (!string.IsNullOrEmpty(tieuChiDetail.GhiChu)) moTaList.Add($"Ghi chú: {tieuChiDetail.GhiChu}");
+                    }
+                }
+                catch { }
+            }
+
+            string loaiGiaoDich = m.LoaiGiaoDich ?? "BAN";
+            var resolvedProvinceId = m.MaTinh
+                ?? m.MaQuanHuyenNavigation?.MaTinh
+                ?? m.MaPhuongXaNavigation?.MaQuanHuyenNavigation?.MaTinh;
+
+            var demand = new NhaTot.Web.Services.BayGiaDemandProfile(
+                TransactionType: loaiGiaoDich,
+                PropertyTypeId: m.MaLoaiBds ?? 0,
+                PropertyTypeName: m.MaLoaiBdsNavigation?.TenLoaiBds,
+                ProvinceId: resolvedProvinceId,
+                DistrictId: m.MaQuanHuyen,
+                WardId: m.MaPhuongXa,
+                MinPrice: minGia,
+                MaxPrice: maxGia > 0 ? maxGia : null,
+                MinArea: tieuChiDetail.DienTichMin,
+                Direction: tieuChiDetail.Huong,
+                LegalStatus: tieuChiDetail.PhapLy,
+                MinBedrooms: tieuChiDetail.SoPhongNgu,
+                MinFrontageM: tieuChiDetail.MatTienMinM);
+
+            var (tinDangList, fbList) = await _suggestions.FindRecommendedBySourceAsync(demand);
+
+            var dto = new MucTieuTheoDoiChiTietDto
+            {
+                MaMucTieu = m.MaMucTieu,
+                TenTinh = resolvedProvinceId.HasValue && tinhMap.TryGetValue(resolvedProvinceId.Value, out var tenT) ? tenT : null,
+                TenQuanHuyen = m.MaQuanHuyenNavigation?.TenQuanHuyen,
+                TenPhuongXa = m.MaPhuongXaNavigation?.TenPhuongXa,
+                TenLoaiBds = m.MaLoaiBdsNavigation?.TenLoaiBds,
+                LoaiGiaoDich = loaiGiaoDich,
+                NganSachMinVnd = minGia,
+                NganSachMaxVnd = maxGia,
+                SoPhongNgu = tieuChiDetail.SoPhongNgu,
+                PhiDaTruDiem = m.TienCocDiem,
+                TrangThai = m.TrangThai ?? "DANG_THEO_DOI",
+                NgayTao = m.NgayTao,
+                NgayHetHan = m.NgayHetHan,
+                DaHetHan = m.NgayHetHan.HasValue && DateTime.Now >= m.NgayHetHan.Value,
+                TieuChiChiTiet = tieuChiDetail,
+                DanhSachMoTaTieuChi = moTaList
+            };
+
+            return View(new BayGiaChiTietViewModel
+            {
+                MucTieu = dto,
+                TinDangTuongDong = tinDangList,
+                TinFacebookTuongDong = fbList,
+                NguongTuongDongPhanTram = NhaTot.Web.Services.BayGiaRecommendationEngine.DefaultMinSimilarityPercent,
+                SoDuViHienTai = vi.SoDuDiem ?? 0
+            });
         }
 
         // POST: /BayGia/TaoMucTieu
@@ -586,7 +727,11 @@ namespace NhaTot.Web.Controllers
             foreach (var l in leads)
             {
                 var tinNguon = l.MaDuLieuNavigation;
-                decimal? giaNguon = tinNguon?.GiaRaoVnd;
+                var parsedGiaNguon = NhaTot.Web.Services.RealEstateTextExtractor.TryParseGiaRaoVnd(tinNguon?.GiaRaoVnd);
+                decimal? giaNguon = parsedGiaNguon
+                    ?? (tinNguon?.GiaMinVnd.HasValue == true && tinNguon?.GiaMaxVnd.HasValue == true
+                        ? (tinNguon.GiaMinVnd.Value + tinNguon.GiaMaxVnd.Value) / 2m
+                        : (tinNguon?.GiaMinVnd ?? tinNguon?.GiaMaxVnd));
 
                 // Lọc theo khoảng giá: GiaRaoVnd <= GiaMongMuonVND * 1.1 HOẶC NULL/<= 0 -> Giá: Liên hệ
                 if (nguongGiaTran.HasValue)
@@ -612,7 +757,9 @@ namespace NhaTot.Web.Controllers
                 string giaHienThi;
                 if (!giaNguon.HasValue || giaNguon.Value <= 0)
                 {
-                    giaHienThi = "Giá: Liên hệ";
+                    giaHienThi = !string.IsNullOrWhiteSpace(tinNguon?.GiaRaoVnd)
+                        ? tinNguon.GiaRaoVnd.Trim()
+                        : "Giá: Liên hệ";
                 }
                 else if (giaNguon.Value >= 1000000000m)
                 {

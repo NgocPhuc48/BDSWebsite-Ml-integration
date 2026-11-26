@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace NhaTot.Domain.Entities;
@@ -30,7 +30,11 @@ public partial class DuLieuThuThap
 
     public string? PhuongXaNguon { get; set; }
 
-    public decimal? GiaRaoVnd { get; set; }
+    public string? GiaRaoVnd { get; set; }
+
+    public decimal? GiaMinVnd { get; set; }
+
+    public decimal? GiaMaxVnd { get; set; }
 
     public decimal? DienTich { get; set; }
 

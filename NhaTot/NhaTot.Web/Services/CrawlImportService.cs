@@ -13,6 +13,16 @@ public sealed class CrawlImportService(NhaTotDbContext context, CrawlExtractionS
     private static string Text(JsonElement item, string key) =>
         item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
 
+    private static string FirstText(JsonElement item, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var val = Text(item, key).Trim();
+            if (val.Length > 0) return val;
+        }
+        return "";
+    }
+
     public static string CanonicalUrl(string value)
     {
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
@@ -68,6 +78,94 @@ public sealed class CrawlImportService(NhaTotDbContext context, CrawlExtractionS
             context.DuLieuThuThaps.Add(entity);
             seenIds.Add(id); seenUrls.Add(url); seenHashes.Add(hash); saved++;
         }
+        await context.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return (saved, duplicate, skipped);
+    }
+
+    public async Task<(int Saved, int Duplicate, int Skipped)> ImportKeywordPostsAsync(
+        JsonElement items, string keyword, string? runId, CancellationToken ct)
+    {
+        var saved = 0; var duplicate = 0; var skipped = 0;
+        if (items.ValueKind != JsonValueKind.Array) return (0, 0, 0);
+
+        var cleanKeyword = string.IsNullOrWhiteSpace(keyword) ? "Facebook" : keyword.Trim();
+
+        var locations = await extraction.LoadLocationsAsync(ct);
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var seenIds = new HashSet<string>(); var seenUrls = new HashSet<string>(); var seenHashes = new HashSet<string>();
+
+        foreach (var item in items.EnumerateArray())
+        {
+            var text = FirstText(item, "text", "postText", "content", "description", "message");
+            if (string.IsNullOrWhiteSpace(text)) { skipped++; continue; }
+
+            var id = FirstText(item, "postId", "post_id", "id");
+            var url = FirstText(item, "postUrl", "post_url", "postLink", "post_link",
+                "permalink", "permalinkUrl", "permalink_url", "webUrl", "url", "link", "facebookUrl", "fbUrl", "shareUrl", "topLevelUrl", "postPermalink");
+            if (url.Length == 0 && id.Length > 0)
+            {
+                var authorId = FirstText(item, "author_user_id", "authorUserId", "authorId", "userId");
+                url = authorId.Length > 0
+                    ? $"https://www.facebook.com/{authorId}/posts/{id}"
+                    : $"https://www.facebook.com/{id}";
+            }
+            if (id.Length > 200) id = id[..200];
+            if (url.Length > 1500) url = url[..1500];
+
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.Normalize().Trim())));
+            if ((id.Length > 0 && seenIds.Contains(id)) || (url.Length > 0 && seenUrls.Contains(url)) || seenHashes.Contains(hash)
+                || await context.DuLieuThuThaps.AnyAsync(x => (id != "" && x.MaTinNguon == id)
+                    || (url != "" && x.Urltin == url) || x.HashNoiDung == hash, ct))
+            { duplicate++; continue; }
+
+            var rawDate = FirstText(item, "postedAt", "createTime", "createdAt", "time");
+            DateTime? postedAt = DateTimeOffset.TryParse(rawDate, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal, out var parsed) ? parsed.UtcDateTime : null;
+
+            var cleanTitle = RealEstateTextExtractor.CleanIcons(text);
+            if (string.IsNullOrWhiteSpace(cleanTitle)) cleanTitle = text.Trim();
+
+            var entity = new DuLieuThuThap
+            {
+                MaNguon = null,
+                MaTinNguon = id.Length > 0 ? id : null,
+                Urltin = url.Length > 0 ? url : null,
+                TieuDe = cleanTitle.Length > 500 ? cleanTitle[..500] : cleanTitle,
+                NoiDungGoc = text,
+                DuLieuGocJson = item.GetRawText(),
+                HashNoiDung = hash,
+                NgayDangNguon = postedAt,
+                NgayThuThap = DateTime.UtcNow,
+                TrangThaiXuLy = "NEW"
+            };
+            entity.LichSuXuLyDuLieus.Add(new LichSuXuLyDuLieu
+            {
+                BuocXuLy = "CRAWL_IMPORT",
+                KetQua = "SUCCESS",
+                ThoiDiem = DateTime.UtcNow,
+                ChiTiet = $"Lưu nóng từ Tool Cào Dữ Liệu (từ khóa: {cleanKeyword}, run: {runId ?? "N/A"})."
+            });
+            CrawlExtractionService.Apply(entity, locations.Provinces, locations.Wards);
+            if (cleanKeyword.Contains("thuê", StringComparison.OrdinalIgnoreCase) || cleanKeyword.Contains("thue", StringComparison.OrdinalIgnoreCase))
+            {
+                entity.LoaiGiaoDichDaDuyet ??= "CHO_THUE";
+            }
+            if (string.IsNullOrWhiteSpace(entity.TinhNguon))
+            {
+                var groupMeta = $"{FirstText(item, "groupName", "inputUrl")} {cleanKeyword}";
+                if (groupMeta.Contains("Hà Tĩnh", StringComparison.OrdinalIgnoreCase) || groupMeta.Contains("Ha Tinh", StringComparison.OrdinalIgnoreCase))
+                    entity.TinhNguon = "Hà Tĩnh";
+                else if (groupMeta.Contains("Nghệ An", StringComparison.OrdinalIgnoreCase) || groupMeta.Contains("Nghe An", StringComparison.OrdinalIgnoreCase))
+                    entity.TinhNguon = "Nghệ An";
+            }
+            context.DuLieuThuThaps.Add(entity);
+            if (id.Length > 0) seenIds.Add(id);
+            if (url.Length > 0) seenUrls.Add(url);
+            seenHashes.Add(hash);
+            saved++;
+        }
+
         await context.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         return (saved, duplicate, skipped);

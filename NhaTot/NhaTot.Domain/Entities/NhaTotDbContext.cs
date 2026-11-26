@@ -78,7 +78,7 @@ public partial class NhaTotDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("Server=.\\SQLEXPRESS;Database=NhaTot;Trusted_Connection=True;TrustServerCertificate=True;");
+            optionsBuilder.UseSqlServer("Server=localhost;Database=NhaTot;User Id=sa;Password=123456;TrustServerCertificate=True;");
         }
     }
 
@@ -192,8 +192,14 @@ public partial class NhaTotDbContext : DbContext
 
             entity.Property(e => e.DienTich).HasColumnType("decimal(12, 2)");
             entity.Property(e => e.GiaRaoVnd)
-                .HasColumnType("decimal(18, 2)")
+                .HasMaxLength(200)
                 .HasColumnName("GiaRaoVND");
+            entity.Property(e => e.GiaMinVnd)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("GiaMinVND");
+            entity.Property(e => e.GiaMaxVnd)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("GiaMaxVND");
             entity.Property(e => e.HashNoiDung)
                 .HasMaxLength(64)
                 .IsUnicode(false)
@@ -718,6 +724,12 @@ public partial class NhaTotDbContext : DbContext
             entity.HasOne(d => d.MaTinNavigation).WithMany(p => p.YeuThiches)
                 .HasForeignKey(d => d.MaTin)
                 .HasConstraintName("FK_YeuThich_TinDang");
+        });
+
+        modelBuilder.Entity<LichCaoDuLieu>(entity =>
+        {
+            entity.ToTable("LichCaoDuLieu");
+            entity.HasKey(e => e.Id);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -15,7 +15,7 @@ public class HomeController : Controller
     }
 
     // GET: / (Trang chủ & Tìm kiếm)
-    public async Task<IActionResult> Index([FromQuery] SearchFilterModel filter)
+    public async Task<IActionResult> Index([FromQuery] SearchFilterModel filter, int page = 1)
     {
         var viewModel = new HomeViewModel
         {
@@ -63,10 +63,16 @@ public class HomeController : Controller
             query = query.Where(t => t.TieuDe!.ToLower().Contains(kw) || (t.MoTa != null && t.MoTa.ToLower().Contains(kw)));
         }
 
-        // Lấy danh sách kết quả mới nhất
+        const int pageSize = 12;
+        var totalItems = await query.CountAsync();
+        page = PaginationViewModel.NormalizePage(page, pageSize, totalItems);
+        ViewBag.Pagination = new PaginationViewModel(page, pageSize, totalItems);
+
+        // Lấy danh sách kết quả theo trang
         viewModel.TinMoiNhat = await query
             .OrderByDescending(t => t.NgayDang)
-            .Take(12)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(t => new TinDangItemDto
             {
                 MaTin = t.MaTin,
@@ -74,7 +80,7 @@ public class HomeController : Controller
                 GiaRaoVnd = t.GiaRaoVnd,
                 LoaiGiaoDich = t.LoaiGiaoDich ?? "BAN",
                 TenLoaiBds = t.MaBdsNavigation!.MaLoaiBdsNavigation!.TenLoaiBds ?? "BĐS",
-                DienTichDat = t.MaBdsNavigation.DienTichDat,
+                DienTichDat = t.MaBdsNavigation.DienTichDat ?? t.MaBdsNavigation.DienTichSuDung,
                 DiaChiHienThi = (t.MaBdsNavigation.MaPhuongXaNavigation != null)
                     ? $"{t.MaBdsNavigation.MaPhuongXaNavigation.TenPhuongXa}, {t.MaBdsNavigation.MaPhuongXaNavigation.MaQuanHuyenNavigation!.TenQuanHuyen}"
                     : t.MaBdsNavigation.DiaChiMoTa ?? "",

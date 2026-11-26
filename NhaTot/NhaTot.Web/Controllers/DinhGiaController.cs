@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
@@ -10,8 +10,27 @@ public class DinhGiaController(NhaTotDbContext db, IAiDinhGiaService valuation, 
 {
     public async Task<IActionResult> Index()
     {
-        ViewBag.DanhSachTinhThanh = await db.TinhThanhs.Where(t => t.TrangThai == true).ToListAsync();
-        ViewBag.DanhSachLoaiBds = await db.LoaiBds.Where(l => l.TrangThai == true).ToListAsync();
+        ViewBag.DanhSachTinhThanh = await db.TinhThanhs.AsNoTracking()
+            .Where(t => t.TrangThai == true)
+            .OrderBy(t => t.MaTinh)
+            .ToListAsync();
+
+        var allTypes = await db.LoaiBds.AsNoTracking()
+            .Where(l => l.TrangThai == true)
+            .OrderBy(l => l.MaLoaiBds)
+            .ToListAsync();
+        string[] standardNames = ["Đất nền", "Nhà", "Căn hộ", "Chung cư", "Biệt thự"];
+        var standardTypes = allTypes.Where(l => standardNames.Contains((l.TenLoaiBds ?? "").Trim(), StringComparer.OrdinalIgnoreCase)).ToList();
+        ViewBag.DanhSachLoaiBds = standardTypes.Count > 0 ? standardTypes : allTypes;
+
+        var activeModel = await db.PhienBanMoHinhs.AsNoTracking()
+            .Include(x => x.KetQuaDanhGiaMoHinhs)
+            .Where(x => x.TenMoHinh == ValuationTrainingService.ModelName && x.TrangThai == "ACTIVE")
+            .OrderByDescending(x => x.NgayHuanLuyen)
+            .FirstOrDefaultAsync();
+        ViewBag.ActiveModel = activeModel;
+        ViewBag.ActiveEval = activeModel?.KetQuaDanhGiaMoHinhs.OrderByDescending(e => e.NgayDanhGia).FirstOrDefault();
+
         return View(new DinhGiaInputModel());
     }
     [HttpPost, ValidateAntiForgeryToken]

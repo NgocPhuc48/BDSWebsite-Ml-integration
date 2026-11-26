@@ -3,9 +3,12 @@
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+*.log
 
-## Visual Studio
+## Visual Studio / VS Code / Rider
 .vs/
+.vscode/
+.idea/
 *.user
 *.suo
 *.userosscache
@@ -15,7 +18,7 @@
 .DS_Store
 Thumbs.db
 
-# Khóa mã hóa cục bộ, không đưa vào source control.
+# Khóa mã hóa & model artifact cục bộ, không đưa vào source control
 **/App_Data/
 
 # Build/cache và công cụ phát triển
@@ -28,13 +31,14 @@ Thumbs.db
 **/*.suo
 .publish-web/
 
-# Cấu hình và token riêng trên từng máy
-**/NhaTot.Web/appsettings.json
-**/appsettings.Local.json
+# Cấu hình nhạy cảm và API token riêng trên từng máy
+**/NhaTot.Web/appsettings.Local.json
+**/appsettings.Development.local.json
 **/.env
 **/.env.*
 !**/.env.example
 **/api.txt
+**/ToolCaoData/api.txt
 **/*.pfx
 **/*.p12
 **/*.key

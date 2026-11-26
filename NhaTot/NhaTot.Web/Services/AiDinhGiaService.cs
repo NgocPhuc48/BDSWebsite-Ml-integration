@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
 using NhaTot.Web.Models;
 namespace NhaTot.Web.Services;
@@ -24,22 +24,55 @@ public sealed class AiDinhGiaService(NhaTotDbContext db, ValuationTrainingServic
         var active = await db.PhienBanMoHinhs.AsNoTracking().Where(x => x.TenMoHinh == ValuationTrainingService.ModelName && x.TrangThai == "ACTIVE")
             .OrderByDescending(x => x.NgayHuanLuyen).FirstOrDefaultAsync();
         var model = active == null ? null : await training.LoadAsync(active);
+
+        var effectiveQuery = query;
+        if (model != null && !model.Supports(effectiveQuery))
+        {
+            var selectedType = await db.LoaiBds.AsNoTracking().FirstOrDefaultAsync(x => x.MaLoaiBds == input.MaLoaiBds);
+            var typeName = (selectedType?.TenLoaiBds ?? "").ToLowerInvariant();
+            string? standardName = typeName.Contains("đất") ? "Đất nền"
+                : (typeName.Contains("căn hộ") || typeName.Contains("chung cư")) ? "Căn hộ"
+                : typeName.Contains("biệt thự") ? "Biệt thự"
+                : typeName.Contains("nhà") ? "Nhà"
+                : null;
+            if (standardName != null)
+            {
+                var mappedTypeId = await db.LoaiBds.AsNoTracking()
+                    .Where(x => x.TrangThai == true && x.TenLoaiBds == standardName)
+                    .Select(x => (int?)x.MaLoaiBds)
+                    .FirstOrDefaultAsync();
+                if (mappedTypeId.HasValue)
+                {
+                    var mapped = query with { Type = mappedTypeId.Value };
+                    if (model.Supports(mapped)) effectiveQuery = mapped;
+                }
+            }
+        }
+
         var result = new KetQuaDinhGiaViewModel { ThoiGianThucHien = DateTime.Now };
         double price, low, high;
-        if (model != null && model.Supports(query) && now - model.LastDate < TimeSpan.FromDays(180))
+        if (model != null && model.Supports(effectiveQuery) && now - model.LastDate < TimeSpan.FromDays(730))
         {
-            price = model.Predict(query); low = price * Math.Exp(-model.LogError90); high = price * Math.Exp(model.LogError90);
+            var evalDate = (now - model.LastDate) > TimeSpan.FromDays(180) ? model.LastDate : now;
+            var evalQuery = effectiveQuery with { Date = evalDate };
+            price = model.Predict(evalQuery); low = price * Math.Exp(-model.LogError90); high = price * Math.Exp(model.LogError90);
             result.TenMoHinh = ValuationTrainingService.ModelName; result.MaPhienBan = active!.MaPhienBan;
-            result.Message = $"Ước tính giá rao từ mô hình huấn luyện; MAPE tập kiểm tra {model.Metrics.Mape:P1}. Khoảng giá từ sai số hiệu chỉnh, không phải cam kết xác suất cho từng tài sản.";
-            if ((model.Support[^1].Date - model.Origin).TotalDays >= 365 && Math.Abs(model.Weights[2] / 12) <= .03)
+            result.DoTinCayPhanTram = Math.Round(Math.Clamp((1.0 - model.Metrics.Mape) * 100.0, 0, 99), 1);
+            result.Message = $"Ước tính giá rao từ mô hình {ValuationTrainingService.ModelName}; MAPE tập kiểm tra {model.Metrics.Mape:P1}, R²={model.Metrics.R2:0.00}. Khoảng giá từ sai số hiệu chỉnh, không phải cam kết xác suất cho từng tài sản.";
+            if ((model.LastDate - model.Origin).TotalDays >= 90)
+            {
+                var monthlyRate = Math.Clamp(model.Weights[2] / 12.0, -0.03, 0.03);
                 for (var i = 1; i <= 6; i++)
                 {
-                    var p = model.Predict(query with { Date = now.AddMonths(i) });
-                    if (!double.IsFinite(p) || !double.IsFinite(p*Math.Exp(model.LogError90)) || p*Math.Exp(model.LogError90) > 1e15) break;
+                    var p = Math.Abs(model.Weights[2] / 12.0) <= 0.03
+                        ? model.Predict(evalQuery with { Date = evalDate.AddMonths(i) })
+                        : price * Math.Exp(monthlyRate * i);
+                    if (!double.IsFinite(p) || !double.IsFinite(p * Math.Exp(model.LogError90)) || p * Math.Exp(model.LogError90) > 1e15) break;
                     result.DanhSachDuBao6Thang.Add(new DuBaoThangItemDto { Thang = i, NhanThang = $"T+{i} ({now.AddMonths(i):MM/yyyy})",
-                        GiaDuBaoVnd = (decimal)Math.Round(p), GiaMinVnd = (decimal)Math.Round(p*Math.Exp(-model.LogError90)),
-                        GiaMaxVnd = (decimal)Math.Round(p*Math.Exp(model.LogError90)), PhanTramTangTruong = (p/price-1)*100 });
+                        GiaDuBaoVnd = (decimal)Math.Round(p), GiaMinVnd = (decimal)Math.Round(p * Math.Exp(-model.LogError90)),
+                        GiaMaxVnd = (decimal)Math.Round(p * Math.Exp(model.LogError90)), PhanTramTangTruong = (p / price - 1) * 100 });
                 }
+            }
         }
         else
         {

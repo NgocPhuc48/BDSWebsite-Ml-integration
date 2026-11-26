@@ -78,6 +78,8 @@
     </div>
 </div>
 
+@await Html.PartialAsync("_Pagination", ViewBag.Pagination as NhaTot.Web.Models.PaginationViewModel)
+
 <!-- Modal Popup Thêm / Sửa -->
 <div class="modal fade" id="quanHuyenModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">

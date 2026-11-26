@@ -1,7 +1,20 @@
+@using System.Text.RegularExpressions
+@using NhaTot.Web.Services
 @model IEnumerable<NhaTot.Domain.Entities.DuLieuThuThap>
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Dữ liệu BĐS đã thu thập";
+    var phoneRegex = new Regex(@"(?<!\d)(?:\+?84|0)(?:3|5|7|8|9)(?:[\s.\-]?\d){8}(?!\d)", RegexOptions.Compiled);
+
+    string ExtractPhones(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "—";
+        var phones = phoneRegex.Matches(text)
+            .Select(m => Regex.Replace(m.Value, @"[\s.\-]", ""))
+            .Distinct()
+            .ToList();
+        return phones.Count > 0 ? string.Join(", ", phones) : "—";
+    }
 }
 <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
     <h3>Dữ liệu BĐS đã thu thập</h3>
@@ -12,33 +25,134 @@
 {
     <div class="alert alert-info" role="status">@message</div>
 }
-<form asp-action="ExtractPending" method="post" class="mb-3">
-    <button type="submit" class="btn btn-primary">Bóc tách bài chưa xử lý (tối đa 100)</button>
-</form>
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <form asp-action="ExtractPending" method="post">
+        <button type="submit" class="btn btn-primary">Bóc tách bài chưa xử lý (tối đa 100)</button>
+    </form>
+    @if (Model.Any())
+    {
+        <form asp-action="DeleteAllDuLieu" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đã thu thập? Hành động này không thể hoàn tác.');">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa toàn bộ dữ liệu</button>
+        </form>
+    }
+</div>
 <div class="card border-0 shadow-sm table-responsive">
     <table class="table table-hover align-middle mb-0">
-        <thead><tr><th scope="col">Bài viết / Nguồn</th><th scope="col">Loại BĐS</th><th scope="col">Giá rao (VNĐ)</th><th scope="col">Diện tích (m²)</th><th scope="col">Vị trí</th><th scope="col">Trạng thái</th></tr></thead>
+        <thead><tr><th scope="col">Bài viết / Nguồn</th><th scope="col">Loại BĐS</th><th scope="col">Khoảng giá / Giá</th><th scope="col">Diện tích (m²)</th><th scope="col">Địa chỉ</th><th scope="col">Tỉnh</th><th scope="col">Số điện thoại</th><th scope="col">Link bài viết</th><th scope="col">Trạng thái</th></tr></thead>
         <tbody>
         @foreach (var item in Model)
         {
+            var phones = ExtractPhones(item.NoiDungGoc);
+            var address = RealEstateTextExtractor.ExtractAddress(item.NoiDungGoc);
+            var cleanTitle = RealEstateTextExtractor.CleanIcons(item.TieuDe);
+            var cleanBody = RealEstateTextExtractor.CleanIcons(item.NoiDungGoc);
+            var province = item.TinhNguon;
             <tr>
                 <td style="min-width:260px;max-width:460px">
-                    <strong>#@item.MaDuLieu · @item.MaNguonNavigation?.TenNguon</strong>
-                    <details><summary>@item.TieuDe</summary><p style="white-space:pre-wrap">@item.NoiDungGoc</p></details>
+                    <strong>#@item.MaDuLieu · @(item.MaNguonNavigation?.TenNguon ?? "Tool Cào Facebook")</strong>
+                    <details><summary>@(string.IsNullOrWhiteSpace(cleanTitle) ? item.TieuDe : cleanTitle)</summary><p style="white-space:pre-wrap">@cleanBody</p></details>
                 </td>
                 <td>@(item.LoaiBdsnguon ?? "—")</td>
-                <td>@(item.GiaRaoVnd?.ToString("N0") ?? "—")</td>
+                <td class="text-nowrap">
+                    @{
+                        var parsedGia = RealEstateTextExtractor.TryParseGiaRaoVnd(item.GiaRaoVnd);
+                    }
+                    @if (parsedGia.HasValue && parsedGia > 0)
+                    {
+                        <div class="fw-semibold">@RealEstateTextExtractor.FormatVndReadable(parsedGia.Value)</div>
+                        <div class="small text-muted">@($"{parsedGia:N0} đ")</div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(item.GiaRaoVnd))
+                    {
+                        <div class="fw-semibold">@item.GiaRaoVnd</div>
+                    }
+                    else if (item.GiaMinVnd.HasValue && item.GiaMaxVnd.HasValue)
+                    {
+                        <div class="fw-semibold">@RealEstateTextExtractor.FormatPriceRange(item.GiaMinVnd, item.GiaMaxVnd)</div>
+                        <div class="small text-muted">@($"{item.GiaMinVnd:N0} - {item.GiaMaxVnd:N0} đ")</div>
+                    }
+                    else
+                    {
+                        @:—
+                    }
+                </td>
                 <td>@(item.DienTich?.ToString("N2") ?? "—")</td>
-                <td>@(item.PhuongXaNguon ?? "—") / @(item.TinhNguon ?? "—")</td>
-                <td><span class="badge bg-secondary">@(item.TrangThaiXuLy switch { "APPROVED" => "Đã duyệt", "REJECTED" => "Đã từ chối", "NEW" => "Chưa xử lý", "EXTRACTED" => "Đã bóc tách · chờ duyệt", "NEEDS_REVIEW" => "Cần kiểm tra", _ => item.TrangThaiXuLy })</span>
-                    <a asp-action="Duyet" asp-route-id="@item.MaDuLieu" class="btn btn-sm btn-outline-primary mt-2">Sửa / Kiểm duyệt</a>
+                <td style="min-width:180px;max-width:280px">@address</td>
+                <td class="text-nowrap text-dark province-cell" data-id="@item.MaDuLieu" data-address="@address">
+                    @if (!string.IsNullOrWhiteSpace(province))
+                    {
+                        @province
+                    }
+                    else if (address != "—")
+                    {
+                        <span class="text-muted small">Đang tra cứu…</span>
+                    }
+                    else
+                    {
+                        @:—
+                    }
+                </td>
+                <td class="text-nowrap">@phones</td>
+                <td style="max-width:240px;word-break:break-all">
+                    @if (Uri.TryCreate(item.Urltin, UriKind.Absolute, out var postUri)
+                        && (postUri.Scheme == "https" || postUri.Scheme == "http"))
+                    {
+                        <a href="@postUri.AbsoluteUri" target="_blank" rel="noopener noreferrer">@postUri.AbsoluteUri</a>
+                    }
+                    else
+                    {
+                        @:—
+                    }
+                </td>
+                <td>
+                    <div>
+                        <span class="badge bg-secondary">@(item.TrangThaiXuLy switch { "APPROVED" => "Đã duyệt", "REJECTED" => "Đã từ chối", "NEW" => "Chưa xử lý", "EXTRACTED" => "Đã bóc tách · chờ duyệt", "NEEDS_REVIEW" => "Cần kiểm tra", _ => item.TrangThaiXuLy })</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        <a asp-action="Duyet" asp-route-id="@item.MaDuLieu" class="btn btn-sm btn-outline-primary">Sửa / Kiểm duyệt</a>
+                        <form asp-action="DeleteDuLieu" asp-route-id="@item.MaDuLieu" method="post" class="d-inline"
+                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài #@item.MaDuLieu?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Xóa</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
         }
         @if (!Model.Any())
         {
-            <tr><td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu đã lưu.</td></tr>
+            <tr><td colspan="9" class="text-center text-muted py-4">Chưa có dữ liệu đã lưu.</td></tr>
         }
         </tbody>
     </table>
 </div>
+
+@await Html.PartialAsync("_Pagination", ViewBag.Pagination as NhaTot.Web.Models.PaginationViewModel)
+
+@section Scripts {
+    <script>
+        (async () => {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const cells = Array.from(document.querySelectorAll('.province-cell'))
+                .filter(c => c.textContent.includes('Đang tra cứu'));
+            for (const cell of cells) {
+                try {
+                    const res = await fetch('/Admin/SocialBot/ResolveProvince', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token
+                        },
+                        body: JSON.stringify({
+                            id: Number(cell.dataset.id),
+                            address: cell.dataset.address
+                        })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    cell.textContent = data.province || '—';
+                } catch {
+                    cell.textContent = '—';
+                }
+            }
+        })();
+    </script>
+}

@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NhaTot.Domain.Entities;
+using NhaTot.Web.Models;
 
 namespace NhaTot.Web.Areas.Admin.Controllers;
 
@@ -17,11 +18,22 @@ public class QuanHuyenController : Controller
     }
 
     // GET: Admin/QuanHuyen
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        // Láº¥y danh sÃ¡ch Quáº­n/Huyá»‡n kÃ¨m thÃ´ng tin Tá»‰nh/ThÃ nh
-        var list = await _context.QuanHuyens
+        var query = _context.QuanHuyens
             .Include(q => q.MaTinhNavigation)
+            .AsQueryable();
+
+        const int pageSize = 20;
+        var totalItems = await query.CountAsync();
+        page = PaginationViewModel.NormalizePage(page, pageSize, totalItems);
+        ViewBag.Pagination = new PaginationViewModel(page, pageSize, totalItems);
+
+        // Lấy danh sách Quận/Huyện kèm thông tin Tỉnh/Thành theo trang
+        var list = await query
+            .OrderBy(q => q.MaQuanHuyen)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         // Láº¥y danh sÃ¡ch Tá»‰nh/ThÃ nh Ä‘ang hoáº¡t Ä‘á»™ng Ä‘á»• vÃ o ViewBag cho Dropdown

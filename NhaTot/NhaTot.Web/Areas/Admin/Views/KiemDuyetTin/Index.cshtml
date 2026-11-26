@@ -1,16 +1,34 @@
 @model IEnumerable<NhaTot.Domain.Entities.TinDang>
+@using NhaTot.Web.Services
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Kiểm duyệt Tin đăng";
     string currentStatus = ViewBag.CurrentStatus ?? "PENDING";
+    var gbtModel = ViewBag.GbtModel as GbtArtifact;
+    var moderationMap = ViewBag.ModerationMap as Dictionary<long, ModerationAssessment> ?? new Dictionary<long, ModerationAssessment>();
+    var flaggedCount = moderationMap.Values.Count(x => x.Level is ModerationRiskLevel.Warning or ModerationRiskLevel.Critical);
 }
 
 <!-- Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Kiểm duyệt Tin đăng</h3>
-        <p class="text-muted mb-0">Quản lý và phê duyệt các bất động sản rao bán / cho thuê trên hệ thống</p>
+        <p class="text-muted mb-0">Quản lý và phê duyệt tin rao bất động sản kèm phân loại cảnh báo giá từ mô hình cây GBDT (XGBoost-style)</p>
     </div>
+    @if (gbtModel != null)
+    {
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                <i class="bi bi-diagram-3-fill me-1"></i>@gbtModel.ModelName · @gbtModel.SampleCount mẫu · MAPE @gbtModel.Metrics.Mape.ToString("P1") · R² @gbtModel.Metrics.R2.ToString("0.00")
+            </span>
+            @if (flaggedCount > 0)
+            {
+                <span class="badge bg-warning text-dark px-3 py-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>@flaggedCount tin cảnh báo giá trên trang
+                </span>
+            }
+        </div>
+    }
 </div>
 
 <!-- Tabs Lọc Trạng Thái -->
@@ -49,6 +67,7 @@
                         <th style="width: 80px;">Mã tin</th>
                         <th>Tiêu đề tin đăng</th>
                         <th>Giá rao</th>
+                        <th>Phân loại AI (GBDT)</th>
                         <th>Người đăng</th>
                         <th>Ngày đăng</th>
                         <th>Trạng thái</th>
@@ -60,16 +79,54 @@
                     {
                         foreach (var item in Model)
                         {
-                            <tr id="row-@item.MaTin">
+                            moderationMap.TryGetValue(item.MaTin, out var assessment);
+                            var rowClass = assessment?.Level switch
+                            {
+                                ModerationRiskLevel.Critical => "table-danger",
+                                ModerationRiskLevel.Warning => "table-warning",
+                                _ => ""
+                            };
+                            var warnMsgJs = assessment != null && assessment.Level is ModerationRiskLevel.Warning or ModerationRiskLevel.Critical
+                                ? System.Text.Json.JsonSerializer.Serialize(assessment.Summary)
+                                : "null";
+
+                            <tr id="row-@item.MaTin" class="@rowClass">
                                 <td><strong>#@item.MaTin</strong></td>
                                 <td>
-                                    <div class="fw-bold text-dark text-truncate" style="max-width: 300px;">@item.TieuDe</div>
+                                    <div class="fw-bold text-dark text-truncate" style="max-width: 280px;">@item.TieuDe</div>
                                     <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>@(item.MaBdsNavigation?.MaPhuongXaNavigation?.TenPhuongXa ?? "N/A")</small>
                                 </td>
                                 <td>
                                     <span class="text-danger fw-bold">
                                         @(item.GiaRaoVnd.HasValue ? string.Format("{0:N0} VNĐ", item.GiaRaoVnd.Value) : "Thỏa thuận")
                                     </span>
+                                </td>
+                                <td>
+                                    @if (assessment == null || assessment.Level == ModerationRiskLevel.Unverified)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border">@(assessment?.BadgeText ?? "Chưa phân loại")</span>
+                                    }
+                                    else if (assessment.Level == ModerationRiskLevel.Critical)
+                                    {
+                                        <span class="badge bg-danger" title="@assessment.Summary">
+                                            <i class="bi bi-exclamation-octagon-fill me-1"></i>@assessment.BadgeText (@(assessment.DeviationPercent >= 0 ? "+" : "")@assessment.DeviationPercent?.ToString("0.#")%)
+                                        </span>
+                                        <div class="small text-muted mt-1">GBDT: ~@RealEstateTextExtractor.FormatVndReadable(assessment.PredictedPriceVnd ?? 0)</div>
+                                    }
+                                    else if (assessment.Level == ModerationRiskLevel.Warning)
+                                    {
+                                        <span class="badge bg-warning text-dark" title="@assessment.Summary">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>@assessment.BadgeText (@(assessment.DeviationPercent >= 0 ? "+" : "")@assessment.DeviationPercent?.ToString("0.#")%)
+                                        </span>
+                                        <div class="small text-muted mt-1">GBDT: ~@RealEstateTextExtractor.FormatVndReadable(assessment.PredictedPriceVnd ?? 0)</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" title="@assessment.Summary">
+                                            <i class="bi bi-check-circle me-1"></i>@assessment.BadgeText (@(assessment.DeviationPercent >= 0 ? "+" : "")@assessment.DeviationPercent?.ToString("0.#")%)
+                                        </span>
+                                        <div class="small text-muted mt-1">GBDT: ~@RealEstateTextExtractor.FormatVndReadable(assessment.PredictedPriceVnd ?? 0)</div>
+                                    }
                                 </td>
                                 <td>
                                     <div class="fw-semibold">@(item.MaNguoiDangNavigation?.HoTen ?? "N/A")</div>
@@ -96,7 +153,7 @@
                                     </button>
                                     @if (item.TrangThai == "PENDING" || item.TrangThai == "REJECTED")
                                     {
-                                        <button class="btn btn-sm btn-success me-1" onclick="approveTin(@item.MaTin)">
+                                        <button class="btn btn-sm btn-success me-1" onclick="approveTin(@item.MaTin, @warnMsgJs)">
                                             <i class="bi bi-check-lg"></i> Duyệt
                                         </button>
                                     }
@@ -116,13 +173,15 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Không có tin đăng nào ở trạng thái này.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">Không có tin đăng nào ở trạng thái này.</td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
     </div>
+
+    @await Html.PartialAsync("_Pagination", ViewBag.Pagination as NhaTot.Web.Models.PaginationViewModel)
 </div>
 
 <!-- Modal Chi Tiết Tin Đăng -->
@@ -157,6 +216,15 @@
                         <small class="text-muted d-block">Thời điểm đăng:</small>
                         <span id="detailNgayDang" class="fw-semibold text-dark"></span>
                     </div>
+                </div>
+
+                <!-- Cảnh báo / Phân loại AI GBDT -->
+                <div id="detailModerationAlert" class="alert d-none mb-3" role="alert">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong><i class="bi bi-diagram-3-fill me-1"></i>Phân loại AI (<span id="detailModModel">GBDT</span>): <span id="detailModBadge"></span></strong>
+                        <span class="small fw-semibold" id="detailModPredicted"></span>
+                    </div>
+                    <div class="small mb-0" id="detailModSummary"></div>
                 </div>
 
                 <!-- Thông tin Người đăng -->
@@ -291,6 +359,18 @@
                     setTxt('detailLoaiGiaoDich', d.loaiGiaoDich === 'BAN' ? 'Rao bán' : 'Cho thuê');
                     setTxt('detailNgayDang', d.ngayDang);
                     setTxt('detailMoTa', d.moTa);
+
+                    const modBox = document.getElementById('detailModerationAlert');
+                    if (modBox && d.moderation) {
+                        const lv = d.moderation.level;
+                        modBox.className = 'alert mb-3 ' + (lv === 'Critical' ? 'alert-danger' : (lv === 'Warning' ? 'alert-warning' : (lv === 'Normal' ? 'alert-success' : 'alert-secondary')));
+                        setTxt('detailModModel', d.moderation.modelName);
+                        setTxt('detailModBadge', d.moderation.badgeText);
+                        setTxt('detailModSummary', d.moderation.summary);
+                        setTxt('detailModPredicted', d.moderation.predictedPriceVnd ? 'Giá GBDT ước tính: ' + Number(d.moderation.predictedPriceVnd).toLocaleString('vi-VN') + ' VNĐ' : '');
+                    } else if (modBox) {
+                        modBox.className = 'alert d-none mb-3';
+                    }
 
                     // Badge trạng thái
                     const badgeElem = document.getElementById('detailBadgeTrangThai');
@@ -440,9 +520,12 @@
             }
         }
 
-        // 1. Duyệt tin đăng qua AJAX
-        async function approveTin(id) {
-            if (!confirm(`Bạn có chắc chắn muốn DUYỆT tin đăng #${id}?`)) return;
+        // 1. Duyệt tin đăng qua AJAX (cảnh báo trước nếu chênh lệch giá 100-200%+)
+        async function approveTin(id, warningMsg = null) {
+            const promptText = warningMsg
+                ? `⚠️ CẢNH BÁO GIÁ TỪ MÔ HÌNH GBDT:\n${warningMsg}\n\nBạn vẫn chắc chắn muốn DUYỆT tin đăng #${id}?`
+                : `Bạn có chắc chắn muốn DUYỆT tin đăng #${id}?`;
+            if (!confirm(promptText)) return;
 
             try {
                 const res = await fetch(`/Admin/KiemDuyetTin/Approve/${id}`, {
